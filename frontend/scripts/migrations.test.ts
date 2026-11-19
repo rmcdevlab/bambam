@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "@playwright/test";
 import assert from "node:assert/strict";
 import { migrationUp } from "./migrations";
 test("Goose parser preserves procedural SQL and excludes down migrations", () => {

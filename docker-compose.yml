@@ -3,15 +3,15 @@ services:
   db:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: bambam
-      POSTGRES_PASSWORD: bambam
-      POSTGRES_DB: bambam
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in frontend/.env.local}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in frontend/.env.local}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in frontend/.env.local}
     ports:
-      - "5433:5432"   # host 5433: a local Windows PostgreSQL often owns 5432
+      - "${POSTGRES_PORT:-5433}:5432"   # host 5433: a local Windows PostgreSQL often owns 5432
     volumes:
       - bambam-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bambam -d bambam"]
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s
       timeout: 3s
       retries: 10

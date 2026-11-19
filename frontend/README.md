@@ -4,7 +4,7 @@ The Next.js application serves the UI, RMC SSO, sessions and every implemented r
 
 ## Local development
 
-1. Start PostgreSQL 17. The repository's `docker compose up -d db` is one option.
+1. Configure ignored `.env.local` from `.env.server.example`, including `POSTGRES_*` values matching `DATABASE_URL`. From the repository root, `docker compose --env-file frontend/.env.local up -d db` starts local PostgreSQL 17. Existing volumes require their original credentials.
 2. Run `npm ci` in this directory.
 3. Configure ignored `.env.local` using `.env.server.example`. For this checkout, server settings have already been copied to `.env.local`; the original private configuration is preserved as ignored `.env.legacy.local`. Keep the same session/SSO secrets and database URL to retain existing sessions/data.
 4. Run `npm run db:migrate`, then `npm run dev`.
@@ -36,7 +36,8 @@ The existing RMC SSO registered callback and logout redirect paths are unchanged
 ```sh
 npm run typecheck
 npm run lint
-npm run test:server
+npm test                 # Playwright browser tests (desktop + mobile)
+npm run test:server      # Playwright server tests (no browser)
 npm run build
 ```
 
@@ -47,3 +48,5 @@ Playwright and Atlas use one isolated Next.js server and a separate test databas
 ## Test artifact policy
 
 Automatic Playwright trace, video and screenshot capture is off. `npm run test:e2e` uses temporary browser output and a per-run Next cache, then deletes both when it exits, including normal interruption. It does not leave a large test cache in the checkout. (CR-056, owner cleanup request 2026-11-19)
+
+Test credentials are separate: copy `.env.test.example` to ignored `.env.test.local`, set `E2E_DATABASE_URL` to a dedicated database and supply independent random `E2E_APP_SESSION_SECRET` / `E2E_SSO_CLIENT_SECRET` values. Generate each with `openssl rand -hex 32`. Playwright browser/server tests and Atlas read this file; injected environment values take precedence. Do not use production credentials for tests.

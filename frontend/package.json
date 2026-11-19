@@ -12,10 +12,11 @@
     "test:db": "node e2e/test-stack.cjs prepare",
     "test:browse": "node e2e/test-stack.cjs browse",
     "atlas": "node ../tools/atlas/cli.mjs serve",
-    "test:server": "node --conditions=react-server --import tsx --test src/server/platform/*.test.ts scripts/*.test.ts",
+    "test:server": "node scripts/test-e2e.mjs --server",
     "db:migrate": "node --conditions=react-server --import tsx scripts/migrate.mts",
     "dev:session": "node --conditions=react-server --import tsx scripts/session.mts",
-    "db:generate": "node scripts/generate-queries.mjs"
+    "db:generate": "node scripts/generate-queries.mjs",
+    "test": "node scripts/test-e2e.mjs"
   },
   "dependencies": {
     "@next/env": "16.4.6",

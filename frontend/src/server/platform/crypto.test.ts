@@ -1,5 +1,6 @@
 import catalog from "./catalog.json";
-import { test } from "node:test";
+import { randomBytes } from "node:crypto";
+import { test } from "@playwright/test";
 import assert from "node:assert/strict";
 import { SignJWT } from "jose";
 import { parseConfig, duration } from "./config";
@@ -32,7 +33,7 @@ for (const [name, claims] of Object.entries({ issuer: { iss: "https://evil.test"
   test(`SSO rejects ${name}`, async () => assert.rejects(validateIDToken(await token(claims), c, now)));
 }
 test("SSO rejects wrong signature and algorithm", async () => {
-  await assert.rejects(validateIDToken(await token({}, "HS256", "wrong-secret-value-at-least-32-bytes"), c, now));
+  await assert.rejects(validateIDToken(await token({}, "HS256", randomBytes(48).toString("base64url")), c, now));
   await assert.rejects(validateIDToken(await token({}, "HS384", c.SSO_CLIENT_SECRET.repeat(2)), c, now));
 });
 test("permissions match live CR-006 registry: unknown filtered, settings editable, superadmin all", () => {

@@ -4,6 +4,10 @@
 
 ## Now
 
+- Owner requested environment-only credentials: Docker PostgreSQL reads ignored `.env.local`; Playwright/Atlas use isolated `.env.test.local` with no database/signing-secret fallback. Synthetic tokens are generated at runtime. Templates contain no passwords/secrets. No tests/build run.
+
+- Owner requested Playwright for testing: `npm test` runs browser flows; `npm run test:server` now runs existing server assertions with Playwright and named steps. Temporary output is deleted; recordings remain off. No tests/build run for this change.
+
 - Additional owner cleanup: removed regenerated Next cache, e2e photo fixtures, superseded UI reference screenshots and obsolete Go CI. Owner authorized deleting all local Git history and starting a new main-branch baseline; origin is retained without pushing. No tests/build run.
 
 - CR-056 implemented: one Next.js app owns auth, repair, settings, PostgreSQL access/migrations, photos and maintenance. Go and API rewrites removed.

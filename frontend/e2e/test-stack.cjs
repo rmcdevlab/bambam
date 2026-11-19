@@ -4,24 +4,25 @@ const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 
 const ROOT = path.join(__dirname, "..", "..");
-const DATABASE_URL = process.env.E2E_DATABASE_URL ?? "postgres://bambam:bambam@localhost:5433/bambam_e2e?sslmode=disable";
-const WEB_PORT = Number(process.env.E2E_PORT ?? 3100);
+const { env: testEnv, required } = require("../scripts/test-env.cjs");
+const DATABASE_URL = required("E2E_DATABASE_URL");
+const WEB_PORT = Number(testEnv.E2E_PORT ?? 3100);
 const BASE_URL = `http://localhost:${WEB_PORT}`;
 const API_URL = BASE_URL;
 
 /** Isolated Next.js server and Node demo-session CLI environment. */
 const apiEnv = {
-  APP_ENV: "development", DATABASE_URL, ROLE_SWITCHER_ENABLED: "true", SUPER_ADMIN_EMPLOYEE_CODES: "EMP0105",
-  APP_SESSION_SECRET: "e2e-session-secret-at-least-32-bytes-long", APP_SESSION_TTL: "12h",
-  SSO_ISSUER: "https://rmc-sso.cipcloud.net", SSO_CLIENT_ID: "bam", SSO_CLIENT_SECRET: "e2e-provider-secret-never-used-for-real-sso",
-  SSO_AUTHORIZE_URL: "https://rmc-sso.cipcloud.net/api/auth/oauth2/authorize",
-  SSO_TOKEN_URL: "https://rmc-sso.cipcloud.net/api/auth/oauth2/token",
-  SSO_USERINFO_URL: "https://rmc-sso.cipcloud.net/api/auth/oauth2/userinfo",
-  SSO_END_SESSION_URL: "https://rmc-sso.cipcloud.net/api/auth/oauth2/endsession",
-  SSO_REDIRECT_URI: "http://localhost:3000/api/auth/callback/rmc-sso", SSO_POST_LOGOUT_REDIRECT_URI: "http://localhost:3000/signed-out",
+  APP_ENV: "development", DATABASE_URL, ROLE_SWITCHER_ENABLED: "true", SUPER_ADMIN_EMPLOYEE_CODES: testEnv.E2E_SUPER_ADMIN_EMPLOYEE_CODES ?? "",
+  APP_SESSION_SECRET: required("E2E_APP_SESSION_SECRET"), APP_SESSION_TTL: "12h",
+  SSO_ISSUER: required("E2E_SSO_ISSUER"), SSO_CLIENT_ID: required("E2E_SSO_CLIENT_ID"), SSO_CLIENT_SECRET: required("E2E_SSO_CLIENT_SECRET"),
+  SSO_AUTHORIZE_URL: required("E2E_SSO_AUTHORIZE_URL"),
+  SSO_TOKEN_URL: required("E2E_SSO_TOKEN_URL"),
+  SSO_USERINFO_URL: required("E2E_SSO_USERINFO_URL"),
+  SSO_END_SESSION_URL: required("E2E_SSO_END_SESSION_URL"),
+  SSO_REDIRECT_URI: required("E2E_SSO_REDIRECT_URI"), SSO_POST_LOGOUT_REDIRECT_URI: required("E2E_SSO_POST_LOGOUT_REDIRECT_URI"),
   MAINTENANCE_SCHEDULER: "external", PHOTO_STORAGE_DIR: path.join(ROOT,"frontend","data","e2e-photos"),
 };
-const webEnv = { ...apiEnv, NEXT_PUBLIC_USE_MOCKS: "false", NEXT_PUBLIC_ROLE_SWITCHER: "true", NEXT_DIST_DIR: process.env.E2E_DIST_DIR ?? ".next-e2e" };
+const webEnv = { ...apiEnv, NEXT_PUBLIC_USE_MOCKS: "false", NEXT_PUBLIC_ROLE_SWITCHER: "true", NEXT_DIST_DIR: testEnv.E2E_DIST_DIR ?? ".next-e2e" };
 
 const PREPARE = `node "${path.join(__dirname, "test-stack.cjs")}" prepare`;
 
@@ -104,7 +105,7 @@ if (require.main === module && process.argv[2] === "prepare") {
     console.log(`test database ready: ${DATABASE_LABEL}`);
   } catch (e) {
     console.error(`test-stack prepare failed: ${String(e.stderr || e.message).trim()}`);
-    console.error("Start PostgreSQL (docker compose up -d db), then retry.");
+    console.error("Start PostgreSQL (from repo root: docker compose --env-file frontend/.env.local up -d db), then retry.");
     process.exit(1);
   }
 }

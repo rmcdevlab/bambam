@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdtemp,rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,7 +16,8 @@ import { repair } from "../repair/controller";
 import { settings } from "../settings/controller";
 import { maintenance } from "./jobs";
 const databaseUrl=process.env.MODULE_TEST_DATABASE_URL;
-test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t=>{
+test("all native backend modules against PostgreSQL",async()=>{
+ test.skip(!databaseUrl,"Set MODULE_TEST_DATABASE_URL to run module integration tests");
  if(!/^\/bambam_cr056_test_modules$/.test(new URL(databaseUrl!).pathname))throw new Error("Use the dedicated module-test database");
  const photoDir=await mkdtemp(join(tmpdir(),"cr056-photos-"));
  Object.assign(process.env,testConfig,{DATABASE_URL:databaseUrl,PHOTO_STORAGE_DIR:photoDir,MAINTENANCE_SCHEDULER:"external"});
@@ -38,7 +39,7 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
  const demos=await transaction(async c=>({employee:await demoUser("employee",c),admin:await demoUser("admin",c),tech:await demoUser("technician",c),lead:await demoUser("housekeeper_lead",c),super:await demoUser("super_admin",c)}));
  const e=demos.employee,a=demos.admin,w=demos.tech,s=demos.super,l=demos.lead;
  let buildings:Row[]=[],categories:Row[]=[],floorId="",roomId="",buildingId="",categoryId="",symptomId="",ticketId="",assetId="",contractorId="",newRole:Row={};
- await t.test("read endpoints return contract-shaped master, dashboard and administration data",async()=>{
+ await test.step("read endpoints return contract-shaped master, dashboard and administration data",async()=>{
   buildings=await ok(e,"repair/buildings");categories=await ok(e,"repair/categories");
   const building=buildings.find(b=>b.floors.some((f:Row)=>f.rooms.length));assert.ok(building);
   buildingId=building.id;const floor=building.floors.find((f:Row)=>f.rooms.length);floorId=floor.id;roomId=floor.rooms[0].id;
@@ -51,7 +52,7 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
   for(const path of ["settings/roles","settings/permissions","settings/buildings","settings/building-types","settings/asset-types","settings/categories","settings/contractor-types","settings/users","settings/audit","settings/audit/actors",`settings/rooms/${roomId}/assets`,`settings/categories/${categoryId}/symptoms`,`settings/assets/labels?buildingId=${buildingId}`])await ok(s,path);
  });
  const base=()=>({categoryId,symptomIds:[symptomId],buildingId,floorId,roomId,locationDetail:"Native module test "+Date.now()});
- await t.test("ticket creation enforces attachments, priority, duplicate locks and ownership",async()=>{
+ await test.step("ticket creation enforces attachments, priority, duplicate locks and ownership",async()=>{
   const photoId=await upload(e),input={...base(),photoIds:[photoId]};
   const created=await ok(e,"repair/tickets","POST",input);ticketId=created.id;
   assert.equal(created.status,"in_progress");assert.equal(created.photos.length,1);assert.match(created.ticketNo,/\d{4}/);
@@ -60,7 +61,7 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
   const mine=await ok(e,"repair/tickets/mine");assert.ok(mine.some((r:Row)=>r.id===ticketId));
   const ownPhoto=await repair(new NextRequest(`http://localhost/api/v1/repair/photos/${photoId}`),e,["photos",photoId],{});assert.ok(ownPhoto instanceof NextResponse);assert.equal(ownPhoto.status,200);
  });
- await t.test("technician assessment, rescheduling, resolve/send-back, confirmation preserve workflow",async()=>{
+ await test.step("technician assessment, rescheduling, resolve/send-back, confirmation preserve workflow",async()=>{
   const assessed=await ok(w,`repair/tickets/${ticketId}/assess`,"POST",{expectedDoneOn:"2099-01-01",workBy:"in_house",assigneeId:w.id});assert.equal(assessed.step,"in_repair");
   const rescheduled=await call(w,`repair/tickets/${ticketId}/assess`,"POST",{expectedDoneOn:"2099-01-02",workBy:"in_house",assigneeId:w.id});assert.equal(rescheduled.error.fields.reason,"REQUIRED");
   await ok(w,`repair/tickets/${ticketId}/resolve`,"POST",{note:"fixed",photoIds:[await upload(w)]});
@@ -69,7 +70,7 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
   const closed=await ok(e,`repair/tickets/${ticketId}/confirm`,"POST",{rating:5});assert.equal(closed.closedReason,"confirmed");
   assert.equal((await call(w,`repair/tickets/${ticketId}/resolve`,"POST",{})).error.code,"TICKET_CLOSED");
  });
- await t.test("contractors, types and privacy work on contractor jobs",async()=>{
+ await test.step("contractors, types and privacy work on contractor jobs",async()=>{
   const type=await ok(w,"repair/contractor-types","POST",{name:"Native contractor type"});
   const c=await ok(w,"repair/contractors","POST",{name:"Native contractor",typeIds:[type.id],phone:"0123456789"});contractorId=c.id;assert.equal(c.types[0].id,type.id);
   assert.equal((await call(w,"repair/contractors","POST",{name:"native contractor",typeIds:[type.id]})).error.code,"CONTRACTOR_NAME_TAKEN");
@@ -79,13 +80,13 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
   const reporter=await ok(e,`repair/tickets/${created.id}`);assert.equal(reporter.contractor,null);assert.equal(reporter.result.contractorRating,null);
   const technician=await ok(w,`repair/tickets/${created.id}`);assert.equal(technician.result.contractorRating,4);await ok(w,`repair/contractors/${contractorId}/jobs`);
  });
- await t.test("team-handled ticket handover and follower permissions",async()=>{
+ await test.step("team-handled ticket handover and follower permissions",async()=>{
   const created=await ok(l,"repair/tickets","POST",{...base(),photoIds:[await upload(l)],teamHandled:{note:"team fixed",photoIds:[await upload(l)]}});
   assert.equal(created.closedReason,"team_handled");await ok(l,`repair/tickets/${created.id}/handover`,"POST",{reason:"needs technician"});
   await ok(e,`repair/tickets/${created.id}/follow`,"POST",{});const following=await ok(e,`repair/tickets/${created.id}`);assert.equal(following.viewerRelation,"subscriber");
   assert.equal((await call(e,`repair/tickets/${created.id}/follow`,"POST",{})).error.code,"ALREADY_FOLLOWING");
  });
- await t.test("role matrix versioning, guard rules, custom role and user assignment",async()=>{
+ await test.step("role matrix versioning, guard rules, custom role and user assignment",async()=>{
   newRole=await ok(s,"settings/roles","POST",{name:"Native custom role",description:"test"});
   const matrix=await ok(s,"settings/permissions"),changed=await ok(s,"settings/permissions","PUT",{version:matrix.version,changes:[{roleId:newRole.id,permission:"repair.ticket.report",granted:true}]});assert.equal(changed.version,matrix.version+1);
   assert.equal((await call(s,"settings/permissions","PUT",{version:matrix.version,changes:[]})).error.code,"VERSION_CONFLICT");
@@ -93,7 +94,7 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
   const real=await upsertSSO("native-real-sub",{USER:"NATIVE-REAL",FIRSTNAME_TH:"ทดสอบ"},{});await ok(s,`settings/users/${real.id}/role`,"PUT",{roleId:newRole.id});const profile=await ok(s,`settings/users/${real.id}`);assert.equal(profile.role.id,newRole.id);assert.equal(profile.roleHistory.length,1);
   assert.equal((await call(s,`settings/roles/${newRole.id}`,"DELETE")).error.code,"ROLE_IN_USE");
  });
- await t.test("category/symptom CRUD, optimistic versions and in-use protection",async()=>{
+ await test.step("category/symptom CRUD, optimistic versions and in-use protection",async()=>{
   const type=buildingTypesFromBuildings(buildings);
   const cat=await ok(s,"settings/categories","POST",{name:"Native category",icon:"wrench",defaultPriority:"high",buildingTypeIds:[type]});
   const symptom=await ok(s,`settings/categories/${cat.id}/symptoms`,"POST",{name:"Native symptom",priority:"critical"});assert.equal(symptom.priority,"critical");
@@ -101,7 +102,7 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
   assert.equal((await call(s,`settings/categories/${cat.id}`,"PATCH",{name:"stale",updatedAt:cat.updatedAt})).error.code,"VERSION_CONFLICT");
   await ok(s,`settings/symptoms/${symptom.id}`,"DELETE");await ok(s,`settings/categories/${cat.id}`,"DELETE");assert.equal((await call(s,`settings/categories/${categoryId}`,"DELETE")).error.code,"IN_USE");
  });
- await t.test("assets, labels, printed-code lock and location versioning",async()=>{
+ await test.step("assets, labels, printed-code lock and location versioning",async()=>{
   const types=await ok(s,"settings/asset-types"),type=types[0];const suggestion=await ok(s,`settings/assets/suggest-code?assetTypeId=${type.id}&roomId=${roomId}`);assert.ok(suggestion.code);
   const asset=await ok(s,"settings/assets","POST",{roomId,assetTypeId:type.id,code:"NATIVE-ASSET",name:"Native equipment"});assetId=asset.id;assert.equal(asset.labelStatus,"never");
   const printed=await ok(s,"settings/assets/labels/printed","POST",{assetIds:[assetId]});assert.equal(printed[0].labelStatus,"current");
@@ -112,7 +113,7 @@ test("all native backend modules against PostgreSQL",{skip:!databaseUrl},async t
   await ok(s,`settings/buildings/${buildingId}`,"PATCH",{name:building.name,updatedAt:renamed.updatedAt});
   await ok(a,`repair/assets/${assetId}/deactivate`,"POST");
  });
- await t.test("automatic closure and session/photo cleanup run without Go",async()=>{
+ await test.step("automatic closure and session/photo cleanup run without Go",async()=>{
   await db.query("UPDATE repair.tickets SET auto_close_at=now()-interval '1 hour' WHERE status='resolved'");
   const result=await maintenance();assert.ok(!result.skipped);assert.equal((await db.query("SELECT count(*) FROM repair.tickets WHERE status='resolved' AND auto_close_at<=now()")).rows[0].count,0);
   const audits=await ok(s,"settings/audit?type=permissions");assert.ok(audits.length);
