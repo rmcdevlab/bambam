@@ -1,0 +1,1360 @@
+{
+  "repair.OverviewCounts": {
+    "sql": "\n\nSELECT\n    count(*) FILTER (WHERE t.status <> 'closed') AS open_count,\n    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NULL) AS awaiting_assessment_count,\n    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NOT NULL) AS in_repair_count,\n    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NOT NULL AND t.send_back_count > 0) AS reworking_count,\n    count(*) FILTER (WHERE t.status = 'resolved') AS awaiting_rating_count,\n    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on < $1::date) AS overdue_count,\n    count(*) FILTER (WHERE t.created_at >= $2::timestamptz) AS reported_today_count,\n    count(*) FILTER (WHERE t.status = 'closed' AND t.closed_at >= $2::timestamptz) AS closed_today_count,\n    count(*) FILTER (WHERE t.status = 'closed' AND t.closed_at >= $3::timestamptz) AS closed_last7_count,\n    count(*) FILTER (WHERE t.status = 'closed' AND t.closed_at >= $3::timestamptz AND t.rating IS NOT NULL) AS rated_last7_count,\n    COALESCE(sum(t.rating) FILTER (WHERE t.status = 'closed' AND t.closed_at >= $3::timestamptz), 0)::bigint AS rating_sum_last7\nFROM repair.tickets t;",
+    "params": [
+      "today",
+      "day_start",
+      "week_start"
+    ]
+  },
+  "repair.OldestAwaitingAssessment": {
+    "sql": "SELECT created_at FROM repair.tickets\nWHERE status = 'in_progress' AND expected_done_on IS NULL\nORDER BY created_at\nLIMIT 1;",
+    "params": []
+  },
+  "repair.NextAutoClose": {
+    "sql": "SELECT auto_close_at::timestamptz FROM repair.tickets\nWHERE status = 'resolved' AND auto_close_at IS NOT NULL\nORDER BY auto_close_at\nLIMIT 1;",
+    "params": []
+  },
+  "repair.OverviewFloors": {
+    "sql": "\n\nSELECT f.id, f.building_id, f.name, f.level,\n    count(t.id) FILTER (WHERE t.priority = 'critical') AS critical_count,\n    count(t.id) FILTER (WHERE t.priority = 'high') AS high_count,\n    count(t.id) FILTER (WHERE t.priority = 'medium') AS medium_count,\n    count(t.id) FILTER (WHERE t.priority = 'low') AS low_count,\n    count(t.id) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NULL) AS awaiting_assessment_count,\n    count(t.id) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NOT NULL) AS in_repair_count,\n    count(t.id) FILTER (WHERE t.status = 'resolved') AS awaiting_rating_count\nFROM platform.floors f\nJOIN platform.buildings b ON b.id = f.building_id\nLEFT JOIN repair.tickets t ON t.floor_id = f.id AND t.status <> 'closed'\nWHERE f.is_active AND b.is_active\nGROUP BY f.id\nORDER BY f.level;",
+    "params": []
+  },
+  "repair.BuildingsWithPlans": {
+    "sql": "\nSELECT f.building_id, max(fp.width_m)::float8 AS width_m, max(fp.depth_m)::float8 AS depth_m\nFROM platform.floor_plans fp\nJOIN platform.floors f ON f.id = fp.floor_id\nWHERE f.is_active\nGROUP BY f.building_id;",
+    "params": []
+  },
+  "repair.ListSiteBlocks": {
+    "sql": "\nSELECT sb.id, sb.map_no, sb.name, b.id AS building_id,\n    sb.x_m::float8 AS x_m, sb.z_m::float8 AS z_m, sb.rot_deg::float8 AS rot_deg,\n    sb.width_m::float8 AS width_m, sb.depth_m::float8 AS depth_m, sb.storeys, sb.side\nFROM platform.site_blocks sb\nLEFT JOIN platform.buildings b ON b.id = sb.building_id AND b.is_active\nORDER BY sb.map_no;",
+    "params": []
+  },
+  "repair.AttentionTicketIDs": {
+    "sql": "\nSELECT t.id FROM repair.tickets t\nWHERE t.status = 'in_progress'\n  AND ((t.expected_done_on IS NOT NULL AND (t.expected_done_on < $1::date OR t.send_back_count > 0))\n       OR t.priority IN ('critical', 'high'))\nORDER BY\n    (t.expected_done_on IS NOT NULL AND t.expected_done_on < $1::date) DESC,\n    (t.expected_done_on IS NOT NULL AND t.send_back_count > 0) DESC,\n    (t.priority = 'critical') DESC,\n    t.created_at, t.id\nLIMIT $2;",
+    "params": [
+      "today",
+      "row_limit"
+    ]
+  },
+  "repair.ListActiveAssetTypes": {
+    "sql": "SELECT id, key, name, code_prefix, icon, mount FROM platform.asset_types\nWHERE is_active\nORDER BY sort_order, name;",
+    "params": []
+  },
+  "repair.GetFloorPlan": {
+    "sql": "SELECT f.id, f.name, f.level, b.id AS building_id, b.name AS building_name,\n    COALESCE(fp.width_m, 0)::float8 AS width_m, COALESCE(fp.depth_m, 0)::float8 AS depth_m, fp.model_file,\n    (fp.floor_id IS NOT NULL)::boolean AS has_plan\nFROM platform.floors f\nJOIN platform.buildings b ON b.id = f.building_id\nLEFT JOIN platform.floor_plans fp ON fp.floor_id = f.id\nWHERE f.id = $1 AND f.is_active AND b.is_active;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.ListFloorRooms": {
+    "sql": "\nSELECT r.id, r.name, r.area_type, r.plan_shape,\n    count(t.id) FILTER (WHERE t.priority = 'critical') AS critical_count,\n    count(t.id) FILTER (WHERE t.priority = 'high') AS high_count,\n    count(t.id) FILTER (WHERE t.priority = 'medium') AS medium_count,\n    count(t.id) FILTER (WHERE t.priority = 'low') AS low_count\nFROM platform.rooms r\nLEFT JOIN repair.tickets t ON t.room_id = r.id AND t.status <> 'closed'\nWHERE r.floor_id = $1 AND r.is_active\nGROUP BY r.id\nORDER BY r.sort_order, r.name;",
+    "params": [
+      "floor_id"
+    ]
+  },
+  "repair.ListFloorAssets": {
+    "sql": "SELECT a.id, a.code, a.name, at.id AS type_id, at.key AS type_key, at.name AS type_name,\n    r.id AS room_id, r.name AS room_name, COALESCE(a.pos_x, 0)::float8 AS pos_x, COALESCE(a.pos_z, 0)::float8 AS pos_z, (a.pos_x IS NOT NULL)::boolean AS placed, a.rotation_deg,\n    (SELECT count(*) FROM repair.tickets t WHERE t.asset_id = a.id AND t.status <> 'closed') AS open_tickets\nFROM platform.assets a\nJOIN platform.asset_types at ON at.id = a.asset_type_id\nJOIN platform.rooms r ON r.id = a.room_id\nWHERE r.floor_id = $1 AND a.is_active\nORDER BY a.code;",
+    "params": [
+      "floor_id"
+    ]
+  },
+  "repair.GetAsset": {
+    "sql": "SELECT a.id, a.code, a.name, at.id AS type_id, at.key AS type_key, at.name AS type_name,\n    r.id AS room_id, r.name AS room_name, COALESCE(a.pos_x, 0)::float8 AS pos_x, COALESCE(a.pos_z, 0)::float8 AS pos_z, (a.pos_x IS NOT NULL)::boolean AS placed, a.rotation_deg,\n    (SELECT count(*) FROM repair.tickets t WHERE t.asset_id = a.id AND t.status <> 'closed') AS open_tickets\nFROM platform.assets a\nJOIN platform.asset_types at ON at.id = a.asset_type_id\nJOIN platform.rooms r ON r.id = a.room_id\nWHERE a.id = $1 AND a.is_active;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.LockAsset": {
+    "sql": "\nSELECT a.id, a.code, a.name, a.asset_type_id, a.room_id, COALESCE(a.pos_x, 0)::float8 AS pos_x, COALESCE(a.pos_z, 0)::float8 AS pos_z, (a.pos_x IS NOT NULL)::boolean AS placed,\n    a.rotation_deg, a.is_active, (a.label_printed_at IS NOT NULL)::boolean AS label_printed\nFROM platform.assets a\nWHERE a.id = $1\nFOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.GetActiveAssetType": {
+    "sql": "SELECT id, key, code_prefix FROM platform.asset_types WHERE id = $1 AND is_active;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.GetPlacementRoom": {
+    "sql": "\nSELECT r.id, r.floor_id, r.plan_shape, COALESCE(fp.width_m, 0)::float8 AS width_m, COALESCE(fp.depth_m, 0)::float8 AS depth_m,\n    (fp.floor_id IS NOT NULL)::boolean AS has_plan\nFROM platform.rooms r\nJOIN platform.floors f ON f.id = r.floor_id\nLEFT JOIN platform.floor_plans fp ON fp.floor_id = r.floor_id\nWHERE r.id = $1 AND r.is_active AND f.is_active;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.ListRoomShapesOnFloor": {
+    "sql": "SELECT id, plan_shape FROM platform.rooms\nWHERE floor_id = $1 AND is_active AND plan_shape IS NOT NULL;",
+    "params": [
+      "floor_id"
+    ]
+  },
+  "repair.AssetCodeTaken": {
+    "sql": "\nSELECT EXISTS (\n    SELECT 1 FROM platform.assets WHERE lower(code) = lower($1) AND id <> $2\n);",
+    "params": [
+      "code",
+      "exclude_id"
+    ]
+  },
+  "repair.ListAssetCodesWithPrefix": {
+    "sql": "SELECT code FROM platform.assets WHERE lower(code) LIKE lower($1::text) || '%';",
+    "params": [
+      "prefix"
+    ]
+  },
+  "repair.GetActiveFloorName": {
+    "sql": "SELECT f.name FROM platform.floors f WHERE f.id = $1 AND f.is_active;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.InsertAsset": {
+    "sql": "INSERT INTO platform.assets (id, code, name, asset_type_id, room_id, pos_x, pos_z, rotation_deg, created_by, updated_by)\nVALUES ($1, $2, $3, $4, $5, $6::float8, $7::float8,\n    $8, $9, $9);",
+    "params": [
+      "id",
+      "code",
+      "name",
+      "asset_type_id",
+      "room_id",
+      "pos_x",
+      "pos_z",
+      "rotation_deg",
+      "actor_id"
+    ]
+  },
+  "repair.UpdateAsset": {
+    "sql": "UPDATE platform.assets SET code = $1, name = $2, room_id = $3,\n    pos_x = $4::float8, pos_z = $5::float8, rotation_deg = $6,\n    updated_by = $7, updated_at = now()\nWHERE id = $8;",
+    "params": [
+      "code",
+      "name",
+      "room_id",
+      "pos_x",
+      "pos_z",
+      "rotation_deg",
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.DeactivateAsset": {
+    "sql": "UPDATE platform.assets SET is_active = false, updated_by = $1, updated_at = now() WHERE id = $2;",
+    "params": [
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.InsertAssetAudit": {
+    "sql": "\nINSERT INTO platform.audit_log (actor_user_id, action, target_type, target_id, data)\nVALUES ($1, $2, 'asset', $3, $4);",
+    "params": [
+      "actor_id",
+      "action",
+      "target_id",
+      "data"
+    ]
+  },
+  "repair.CountOpenTicketsByAsset": {
+    "sql": "\nSELECT asset_id::uuid AS asset_id, count(*)::bigint AS open_count\nFROM repair.tickets\nWHERE asset_id = ANY($1::uuid[]) AND status <> 'closed'\nGROUP BY asset_id;",
+    "params": [
+      "asset_ids"
+    ]
+  },
+  "repair.LookupAssetByCode": {
+    "sql": "\nSELECT a.code, a.name, a.asset_type_id,\n    r.id AS room_id, r.name AS room_name, f.id AS floor_id, f.name AS floor_name,\n    b.id AS building_id, b.name AS building_name\nFROM platform.assets a\nJOIN platform.rooms r ON r.id = a.room_id AND r.is_active\nJOIN platform.floors f ON f.id = r.floor_id AND f.is_active\nJOIN platform.buildings b ON b.id = f.building_id AND b.is_active\nWHERE lower(a.code) = lower($1) AND a.is_active;",
+    "params": [
+      "code"
+    ]
+  },
+  "repair.ListAssetTypeCategories": {
+    "sql": "\nSELECT c.id, c.name, c.is_other,\n    EXISTS (\n        SELECT 1 FROM platform.buildings b\n        JOIN repair.category_building_types cbt ON cbt.building_type_id = b.building_type_id\n        WHERE b.id = $1 AND cbt.category_id = c.id\n    ) AS used_in_building\nFROM repair.asset_type_categories atc\nJOIN repair.categories c ON c.id = atc.category_id AND c.is_active\nWHERE atc.asset_type_id = $2\nORDER BY c.is_other, c.sort_order, c.name;",
+    "params": [
+      "building_id",
+      "asset_type_id"
+    ]
+  },
+  "repair.ActiveAssetIDByCode": {
+    "sql": "\nSELECT id FROM platform.assets WHERE lower(code) = lower($1) AND is_active;",
+    "params": [
+      "code"
+    ]
+  },
+  "repair.ListContractorTypes": {
+    "sql": "\nSELECT id, name FROM repair.contractor_types\nWHERE is_active\nORDER BY lower(name);",
+    "params": []
+  },
+  "repair.GetContractorTypeByName": {
+    "sql": "SELECT id, name, is_active FROM repair.contractor_types\nWHERE lower(name) = lower($1);",
+    "params": [
+      "name"
+    ]
+  },
+  "repair.ReactivateContractorType": {
+    "sql": "\nUPDATE repair.contractor_types SET is_active = true, updated_by_id = $1, updated_at = now() WHERE id = $2;",
+    "params": [
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.InsertContractorType": {
+    "sql": "\nINSERT INTO repair.contractor_types (name, created_by_id) VALUES ($1, $2)\nON CONFLICT ((lower(name))) DO NOTHING\nRETURNING id, name;",
+    "params": [
+      "name",
+      "created_by_id"
+    ]
+  },
+  "repair.CountContractorTypes": {
+    "sql": "SELECT count(*) FROM repair.contractor_types WHERE id = ANY($1::uuid[]);",
+    "params": [
+      "ids"
+    ]
+  },
+  "repair.ListContractors": {
+    "sql": "SELECT c.id, c.name, c.contact_name, c.phone, c.note, c.is_active, c.created_at, c.updated_at,\n       (SELECT count(*) FROM repair.tickets t WHERE t.contractor_id = c.id) AS job_count,\n       (SELECT COALESCE(avg(t.contractor_rating), 0)::float8 FROM repair.tickets t WHERE t.contractor_id = c.id AND t.contractor_rating IS NOT NULL) AS avg_rating,\n       (SELECT count(t.contractor_rating) FROM repair.tickets t WHERE t.contractor_id = c.id) AS rated_count\nFROM repair.contractors c\nWHERE ($1::boolean OR c.is_active)\n  AND ($2::text IS NULL OR c.name ILIKE '%' || $2::text || '%'\n       OR c.contact_name ILIKE '%' || $2::text || '%')\n  AND ($3::uuid IS NULL OR EXISTS (\n        SELECT 1 FROM repair.contractor_type_links l WHERE l.contractor_id = c.id AND l.type_id = $3::uuid))\nORDER BY c.is_active DESC, lower(c.name), c.id\nLIMIT $4 OFFSET $5;",
+    "params": [
+      "include_inactive",
+      "q",
+      "type_id",
+      "page_limit",
+      "page_offset"
+    ]
+  },
+  "repair.CountContractors": {
+    "sql": "SELECT count(*) FROM repair.contractors c\nWHERE ($1::boolean OR c.is_active)\n  AND ($2::text IS NULL OR c.name ILIKE '%' || $2::text || '%'\n       OR c.contact_name ILIKE '%' || $2::text || '%')\n  AND ($3::uuid IS NULL OR EXISTS (\n        SELECT 1 FROM repair.contractor_type_links l WHERE l.contractor_id = c.id AND l.type_id = $3::uuid));",
+    "params": [
+      "include_inactive",
+      "q",
+      "type_id"
+    ]
+  },
+  "repair.GetContractor": {
+    "sql": "SELECT c.id, c.name, c.contact_name, c.phone, c.note, c.is_active, c.created_at, c.updated_at,\n       (SELECT count(*) FROM repair.tickets t WHERE t.contractor_id = c.id) AS job_count,\n       (SELECT COALESCE(avg(t.contractor_rating), 0)::float8 FROM repair.tickets t WHERE t.contractor_id = c.id AND t.contractor_rating IS NOT NULL) AS avg_rating,\n       (SELECT count(t.contractor_rating) FROM repair.tickets t WHERE t.contractor_id = c.id) AS rated_count\nFROM repair.contractors c\nWHERE c.id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.ListTypesForContractors": {
+    "sql": "SELECT l.contractor_id, ty.id, ty.name FROM repair.contractor_type_links l\nJOIN repair.contractor_types ty ON ty.id = l.type_id\nWHERE l.contractor_id = ANY($1::uuid[])\nORDER BY l.contractor_id, lower(ty.name);",
+    "params": [
+      "contractor_ids"
+    ]
+  },
+  "repair.InsertContractor": {
+    "sql": "INSERT INTO repair.contractors (id, name, contact_name, phone, note, created_by_id)\nVALUES ($1, $2, $3, $4, $5, $6);",
+    "params": [
+      "id",
+      "name",
+      "contact_name",
+      "phone",
+      "note",
+      "created_by_id"
+    ]
+  },
+  "repair.UpdateContractor": {
+    "sql": "UPDATE repair.contractors\nSET name = $1, contact_name = $2, phone = $3, note = $4, is_active = $5, updated_at = now()\nWHERE id = $6;",
+    "params": [
+      "name",
+      "contact_name",
+      "phone",
+      "note",
+      "is_active",
+      "id"
+    ]
+  },
+  "repair.DeleteContractorTypeLinks": {
+    "sql": "DELETE FROM repair.contractor_type_links WHERE contractor_id = $1;",
+    "params": [
+      "contractor_id"
+    ]
+  },
+  "repair.InsertContractorTypeLinks": {
+    "sql": "INSERT INTO repair.contractor_type_links (contractor_id, type_id)\nSELECT $1, unnest($2::uuid[]);",
+    "params": [
+      "contractor_id",
+      "type_ids"
+    ]
+  },
+  "repair.ContractorWithName": {
+    "sql": "\nSELECT id, is_active FROM repair.contractors WHERE lower(name) = lower($1) AND id <> $2 LIMIT 1;",
+    "params": [
+      "name",
+      "exclude_id"
+    ]
+  },
+  "repair.ActiveContractorExists": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM repair.contractors WHERE id = $1 AND is_active);",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.ListContractorJobs": {
+    "sql": "\nSELECT t.id, t.ticket_no, t.status, t.category_id, COALESCE(c.name, t.category_other, '')::text AS category_name,\n       t.resolved_at, t.contractor_rating, t.contractor_rating_comment, t.rating\nFROM repair.tickets t\nLEFT JOIN repair.categories c ON c.id = t.category_id\nWHERE t.contractor_id = $1\nORDER BY t.resolved_at DESC NULLS LAST, t.id\nLIMIT $2 OFFSET $3;",
+    "params": [
+      "contractor_id",
+      "page_limit",
+      "page_offset"
+    ]
+  },
+  "repair.CountContractorJobs": {
+    "sql": "SELECT count(*) FROM repair.tickets WHERE contractor_id = $1;",
+    "params": [
+      "contractor_id"
+    ]
+  },
+  "repair.ListActiveCategories": {
+    "sql": "\nSELECT id, name, icon, default_priority, is_other FROM repair.categories\nWHERE is_active\nORDER BY is_other, sort_order, name;",
+    "params": []
+  },
+  "repair.ListCategoryBuildingTypes": {
+    "sql": "\nSELECT cbt.category_id, cbt.building_type_id FROM repair.category_building_types cbt\nJOIN platform.building_types bt ON bt.id = cbt.building_type_id AND bt.is_active\nORDER BY cbt.category_id, bt.sort_order, bt.name;",
+    "params": []
+  },
+  "repair.ListActiveSymptoms": {
+    "sql": "SELECT s.id, s.category_id, s.name, s.priority FROM repair.symptoms s\nJOIN repair.categories c ON c.id = s.category_id\nWHERE s.is_active AND c.is_active\nORDER BY s.sort_order, s.name;",
+    "params": []
+  },
+  "repair.ListActiveBuildings": {
+    "sql": "SELECT b.id, b.name, bt.id AS building_type_id, bt.name AS building_type_name, b.model_key\nFROM platform.buildings b\nJOIN platform.building_types bt ON bt.id = b.building_type_id\nWHERE b.is_active\nORDER BY b.sort_order, b.name;",
+    "params": []
+  },
+  "repair.ListActiveFloors": {
+    "sql": "SELECT f.id, f.building_id, f.name, f.level FROM platform.floors f\nJOIN platform.buildings b ON b.id = f.building_id\nWHERE f.is_active AND b.is_active\nORDER BY f.level;",
+    "params": []
+  },
+  "repair.ListActiveRooms": {
+    "sql": "\nSELECT r.id, r.floor_id, r.name, r.area_type FROM platform.rooms r\nWHERE r.is_active\nORDER BY r.sort_order, r.name;",
+    "params": []
+  },
+  "repair.LockActiveCategory": {
+    "sql": "\n\nSELECT default_priority, is_other FROM repair.categories\nWHERE id = $1 AND is_active\nFOR NO KEY UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.ActiveSymptomPriorities": {
+    "sql": "\nSELECT priority FROM repair.symptoms\nWHERE id = ANY($1::uuid[]) AND category_id = $2 AND is_active;",
+    "params": [
+      "ids",
+      "category_id"
+    ]
+  },
+  "repair.ActiveFloorInBuilding": {
+    "sql": "SELECT EXISTS (\n    SELECT 1 FROM platform.floors f\n    JOIN platform.buildings b ON b.id = f.building_id\n    WHERE f.id = $1 AND f.building_id = $2 AND f.is_active AND b.is_active\n);",
+    "params": [
+      "floor_id",
+      "building_id"
+    ]
+  },
+  "repair.ActiveRoomOnFloor": {
+    "sql": "\nSELECT EXISTS (\n    SELECT 1 FROM platform.rooms r\n    WHERE r.id = $1 AND r.floor_id = $2 AND r.is_active\n);",
+    "params": [
+      "room_id",
+      "floor_id"
+    ]
+  },
+  "repair.CategoryUsedInBuilding": {
+    "sql": "\nSELECT EXISTS (\n    SELECT 1 FROM platform.buildings b\n    JOIN repair.category_building_types cbt ON cbt.building_type_id = b.building_type_id\n    WHERE b.id = $1 AND cbt.category_id = $2\n);",
+    "params": [
+      "building_id",
+      "category_id"
+    ]
+  },
+  "repair.GetSettings": {
+    "sql": "SELECT ticket_prefix, ticket_year_format, ticket_digits FROM repair.settings WHERE id;",
+    "params": []
+  },
+  "repair.NextTicketCounter": {
+    "sql": "\nINSERT INTO repair.ticket_counters (year, last_no) VALUES ($1, 1)\nON CONFLICT (year) DO UPDATE SET last_no = repair.ticket_counters.last_no + 1, updated_at = now()\nRETURNING last_no;",
+    "params": [
+      "year"
+    ]
+  },
+  "repair.InsertPhoto": {
+    "sql": "INSERT INTO repair.photos (id, uploader_id, content_type, size_bytes, storage_key, thumb_key, thumb_content_type)\nVALUES ($1, $2, $3, $4, $5, $6, $7);",
+    "params": [
+      "id",
+      "uploader_id",
+      "content_type",
+      "size_bytes",
+      "storage_key",
+      "thumb_key",
+      "thumb_content_type"
+    ]
+  },
+  "repair.GetPhoto": {
+    "sql": "SELECT p.id, p.uploader_id, p.content_type, p.storage_key, p.thumb_key, p.thumb_content_type, tp.ticket_id,\n       tp.kind, t.status AS ticket_status\nFROM repair.photos p\nLEFT JOIN repair.ticket_photos tp ON tp.photo_id = p.id\nLEFT JOIN repair.tickets t ON t.id = tp.ticket_id\nWHERE p.id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.LockAttachablePhotos": {
+    "sql": "\nSELECT id FROM repair.photos\nWHERE id = ANY($1::uuid[]) AND uploader_id = $2 AND attached_at IS NULL AND created_at > $3\nFOR UPDATE;",
+    "params": [
+      "ids",
+      "uploader_id",
+      "not_before"
+    ]
+  },
+  "repair.MarkPhotosAttached": {
+    "sql": "UPDATE repair.photos SET attached_at = now(), updated_at = now() WHERE id = ANY($1::uuid[]);",
+    "params": [
+      "ids"
+    ]
+  },
+  "repair.InsertTicketPhotos": {
+    "sql": "INSERT INTO repair.ticket_photos (photo_id, ticket_id, kind, event_id, sort_order)\nSELECT p.photo_id, $1, $2, $3::uuid, p.ord::integer - 1\nFROM unnest($4::uuid[]) WITH ORDINALITY AS p (photo_id, ord);",
+    "params": [
+      "ticket_id",
+      "kind",
+      "event_id",
+      "photo_ids"
+    ]
+  },
+  "repair.ListTicketPhotos": {
+    "sql": "SELECT photo_id, kind, event_id FROM repair.ticket_photos\nWHERE ticket_id = $1\nORDER BY kind, sort_order;",
+    "params": [
+      "ticket_id"
+    ]
+  },
+  "repair.DeleteUnattachedPhotos": {
+    "sql": "DELETE FROM repair.photos\nWHERE attached_at IS NULL AND created_at < $1\nRETURNING storage_key, thumb_key;",
+    "params": [
+      "older_than"
+    ]
+  },
+  "repair.AdminListCategories": {
+    "sql": "SELECT c.id, c.name, c.icon, c.sort_order, c.is_active, c.default_priority, c.is_other, c.updated_at,\n       (SELECT count(*) FROM repair.symptoms s WHERE s.category_id = c.id)::bigint AS symptom_count,\n       (SELECT count(*) FROM repair.symptoms s WHERE s.category_id = c.id AND s.is_active)::bigint AS active_symptom_count,\n       (EXISTS (SELECT 1 FROM repair.tickets t WHERE t.category_id = c.id))::boolean AS in_use,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM repair.categories c\nLEFT JOIN platform.users ub ON ub.id = c.updated_by_id\nORDER BY c.sort_order, c.name;",
+    "params": []
+  },
+  "repair.AdminLockCategory": {
+    "sql": "SELECT c.id, c.name, c.icon, c.sort_order, c.is_active, c.default_priority, c.is_other, c.updated_at,\n       (EXISTS (SELECT 1 FROM repair.tickets t WHERE t.category_id = c.id))::boolean AS in_use\nFROM repair.categories c WHERE c.id = $1 FOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.AdminCategoryNameTaken": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM repair.categories WHERE lower(name) = lower($1::text) AND id <> $2)::boolean;",
+    "params": [
+      "name",
+      "self_id"
+    ]
+  },
+  "repair.AdminInsertCategory": {
+    "sql": "\nINSERT INTO repair.categories (id, name, icon, default_priority, sort_order, updated_by_id)\nVALUES ($1, $2, $3, $4, (SELECT coalesce(max(sort_order), 0) + 1 FROM repair.categories), $5);",
+    "params": [
+      "id",
+      "name",
+      "icon",
+      "default_priority",
+      "actor_id"
+    ]
+  },
+  "repair.AdminUpdateCategory": {
+    "sql": "UPDATE repair.categories SET name = $1, icon = $2, default_priority = $3, is_active = $4,\n    updated_by_id = $5, updated_at = now()\nWHERE id = $6;",
+    "params": [
+      "name",
+      "icon",
+      "default_priority",
+      "is_active",
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.AdminActiveBuildingTypes": {
+    "sql": "\nSELECT id, name FROM platform.building_types WHERE is_active ORDER BY sort_order, name;",
+    "params": []
+  },
+  "repair.AdminInsertCategoryBuildingTypes": {
+    "sql": "INSERT INTO repair.category_building_types (category_id, building_type_id)\nSELECT $1, unnest($2::uuid[])\nON CONFLICT DO NOTHING;",
+    "params": [
+      "category_id",
+      "building_type_ids"
+    ]
+  },
+  "repair.AdminClearCategoryActiveBuildingTypes": {
+    "sql": "\nDELETE FROM repair.category_building_types cbt\nUSING platform.building_types bt\nWHERE cbt.category_id = $1 AND bt.id = cbt.building_type_id AND bt.is_active;",
+    "params": [
+      "category_id"
+    ]
+  },
+  "repair.AdminClearCategoryBuildingTypes": {
+    "sql": "DELETE FROM repair.category_building_types WHERE category_id = $1;",
+    "params": [
+      "category_id"
+    ]
+  },
+  "repair.AdminListBuildingTypeCategories": {
+    "sql": "\nSELECT building_type_id, category_id FROM repair.category_building_types ORDER BY building_type_id, category_id;",
+    "params": []
+  },
+  "repair.AdminLinkBuildingTypeCategories": {
+    "sql": "\nINSERT INTO repair.category_building_types (category_id, building_type_id)\nSELECT unnest($1::uuid[]), $2\nON CONFLICT DO NOTHING;",
+    "params": [
+      "category_ids",
+      "building_type_id"
+    ]
+  },
+  "repair.AdminCategoryHasUsedSymptom": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM repair.ticket_symptoms ts JOIN repair.symptoms s ON s.id = ts.symptom_id WHERE s.category_id = $1)::boolean;",
+    "params": [
+      "category_id"
+    ]
+  },
+  "repair.AdminDeleteCategoryChildren": {
+    "sql": "\nDELETE FROM repair.symptoms WHERE category_id = $1;",
+    "params": [
+      "category_id"
+    ]
+  },
+  "repair.AdminDeleteCategoryLinks": {
+    "sql": "DELETE FROM repair.asset_type_categories WHERE category_id = $1;",
+    "params": [
+      "category_id"
+    ]
+  },
+  "repair.AdminDeleteCategory": {
+    "sql": "DELETE FROM repair.categories WHERE id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.AdminSetCategoryOrder": {
+    "sql": "UPDATE repair.categories SET sort_order = $1, updated_at = now(), updated_by_id = $2 WHERE id = $3;",
+    "params": [
+      "sort_order",
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.AdminListSymptoms": {
+    "sql": "SELECT s.id, s.category_id, s.name, s.sort_order, s.is_active, s.priority, s.updated_at,\n       (EXISTS (SELECT 1 FROM repair.ticket_symptoms ts WHERE ts.symptom_id = s.id))::boolean AS in_use,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM repair.symptoms s\nLEFT JOIN platform.users ub ON ub.id = s.updated_by_id\nWHERE s.category_id = $1\nORDER BY s.sort_order, s.name;",
+    "params": [
+      "category_id"
+    ]
+  },
+  "repair.AdminLockSymptom": {
+    "sql": "SELECT s.id, s.category_id, s.name, s.sort_order, s.is_active, s.priority, s.updated_at, c.name AS category_name,\n       (EXISTS (SELECT 1 FROM repair.ticket_symptoms ts WHERE ts.symptom_id = s.id))::boolean AS in_use\nFROM repair.symptoms s JOIN repair.categories c ON c.id = s.category_id\nWHERE s.id = $1 FOR UPDATE OF s;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.AdminSymptomNameTaken": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM repair.symptoms WHERE category_id = $1 AND lower(name) = lower($2::text) AND id <> $3)::boolean;",
+    "params": [
+      "category_id",
+      "name",
+      "self_id"
+    ]
+  },
+  "repair.AdminInsertSymptom": {
+    "sql": "INSERT INTO repair.symptoms (id, category_id, name, priority, sort_order, updated_by_id)\nVALUES ($1, $2, $3, $4,\n        (SELECT coalesce(max(sort_order), 0) + 1 FROM repair.symptoms WHERE category_id = $2), $5);",
+    "params": [
+      "id",
+      "category_id",
+      "name",
+      "priority",
+      "actor_id"
+    ]
+  },
+  "repair.AdminUpdateSymptom": {
+    "sql": "UPDATE repair.symptoms SET name = $1, priority = $2, is_active = $3, updated_by_id = $4, updated_at = now()\nWHERE id = $5;",
+    "params": [
+      "name",
+      "priority",
+      "is_active",
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.AdminDeleteSymptom": {
+    "sql": "DELETE FROM repair.symptoms WHERE id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.AdminSetSymptomOrder": {
+    "sql": "UPDATE repair.symptoms SET sort_order = $1, updated_at = now(), updated_by_id = $2 WHERE id = $3;",
+    "params": [
+      "sort_order",
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.AdminListContractorTypes": {
+    "sql": "\nSELECT t.id, t.name, t.is_active, t.created_at, t.updated_at,\n       (SELECT count(DISTINCT l.contractor_id) FROM repair.contractor_type_links l WHERE l.type_id = t.id)::bigint AS contractor_count,\n       cb.id AS created_by_user_id, cb.employee_code AS created_by_employee_code,\n       cb.first_name_th AS created_by_first_name_th, cb.last_name_th AS created_by_last_name_th,\n       cb.first_name_en AS created_by_first_name_en, cb.last_name_en AS created_by_last_name_en,\n       cb.department AS created_by_department,\n       (cb.id IS NOT NULL AND coalesce((SELECT r.key FROM platform.user_roles ur JOIN platform.roles r ON r.id = ur.role_id\n                                        WHERE ur.employee_code = cb.employee_code), 'employee') <> 'super_admin')::boolean AS created_by_technician,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM repair.contractor_types t\nLEFT JOIN platform.users cb ON cb.id = t.created_by_id\nLEFT JOIN platform.users ub ON ub.id = t.updated_by_id\nORDER BY t.name COLLATE \"th-x-icu\";",
+    "params": []
+  },
+  "repair.AdminLockContractorType": {
+    "sql": "SELECT t.id, t.name, t.is_active, t.updated_at,\n       (EXISTS (SELECT 1 FROM repair.contractor_type_links l WHERE l.type_id = t.id))::boolean AS in_use\nFROM repair.contractor_types t WHERE t.id = $1 FOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.AdminContractorTypeNameTaken": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM repair.contractor_types WHERE lower(name) = lower($1::text) AND id <> $2)::boolean;",
+    "params": [
+      "name",
+      "self_id"
+    ]
+  },
+  "repair.AdminInsertContractorType": {
+    "sql": "INSERT INTO repair.contractor_types (id, name, created_by_id, updated_by_id) VALUES ($1, $2, $3, $3);",
+    "params": [
+      "id",
+      "name",
+      "actor_id"
+    ]
+  },
+  "repair.AdminUpdateContractorType": {
+    "sql": "UPDATE repair.contractor_types SET name = $1, is_active = $2, updated_by_id = $3, updated_at = now() WHERE id = $4;",
+    "params": [
+      "name",
+      "is_active",
+      "actor_id",
+      "id"
+    ]
+  },
+  "repair.AdminDeleteContractorType": {
+    "sql": "DELETE FROM repair.contractor_types WHERE id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.InsertTicket": {
+    "sql": "\nINSERT INTO repair.tickets (\n    id, ticket_no, status, closed_reason, closed_at, priority, priority_source, category_id, category_other, symptom_other,\n    building_id, floor_id, room_id, location_detail, details, asset_code, asset_id, reporter_id, created_at, updated_at\n) VALUES (\n    $1, $2, $3, $4::text, $5::timestamptz,\n    $6, $7, $8::uuid,\n    $9::text, $10::text,\n    $11, $12, $13, $14, $15, $16, $17::uuid,\n    $18, $19, $19\n);",
+    "params": [
+      "id",
+      "ticket_no",
+      "status",
+      "closed_reason",
+      "closed_at",
+      "priority",
+      "priority_source",
+      "category_id",
+      "category_other",
+      "symptom_other",
+      "building_id",
+      "floor_id",
+      "room_id",
+      "location_detail",
+      "details",
+      "asset_code",
+      "asset_id",
+      "reporter_id",
+      "created_at"
+    ]
+  },
+  "repair.InsertTicketSymptoms": {
+    "sql": "INSERT INTO repair.ticket_symptoms (ticket_id, symptom_id, sort_order)\nSELECT $1, s.symptom_id, s.ord::integer - 1\nFROM unnest($2::uuid[]) WITH ORDINALITY AS s (symptom_id, ord);",
+    "params": [
+      "ticket_id",
+      "symptom_ids"
+    ]
+  },
+  "repair.InsertTicketEvent": {
+    "sql": "INSERT INTO repair.ticket_events (id, ticket_id, type, actor_id, note, data, created_at)\nVALUES ($1, $2, $3, $4, $5, $6, $7);",
+    "params": [
+      "id",
+      "ticket_id",
+      "type",
+      "actor_id",
+      "note",
+      "data",
+      "created_at"
+    ]
+  },
+  "repair.GetTicket": {
+    "sql": "SELECT\n    t.id, t.ticket_no, t.status, t.closed_reason, t.priority, t.priority_source,\n    t.category_id, c.name AS category_name, c.icon AS category_icon, t.category_other, t.symptom_other,\n    t.building_id, b.name AS building_name,\n    t.floor_id, f.name AS floor_name,\n    t.room_id, rm.name AS room_name,\n    t.location_detail, t.details, t.asset_code, ast.code AS linked_asset_code, ast.name AS linked_asset_name,\n    t.reporter_id, rp.name AS reporter_name, rp.department AS reporter_department,\n    t.holder_id, hp.name AS holder_name, hp.department AS holder_department,\n    t.result_note,\n    t.resolved_by_id, rb.name AS resolved_by_name, rb.department AS resolved_by_department,\n    t.rating, t.rating_comment, t.send_back_count,\n    t.expected_done_on, t.assessed_at, t.work_by,\n    t.contractor_id, ct.name AS contractor_name, t.contractor_rating, t.contractor_rating_comment,\n    t.assignee_id, asg.name AS assignee_name, asg.role_name AS assignee_role_name,\n    t.auto_close_at, t.resolved_at, t.closed_at, t.created_at, t.updated_at,\n    EXISTS (SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = $1) AS viewer_subscribed,\n    (SELECT count(*) FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id) AS subscriber_count\nFROM repair.tickets t\nLEFT JOIN repair.categories c ON c.id = t.category_id\nJOIN platform.buildings b ON b.id = t.building_id\nJOIN platform.floors f ON f.id = t.floor_id\nLEFT JOIN platform.rooms rm ON rm.id = t.room_id\nJOIN repair.people rp ON rp.id = t.reporter_id\nLEFT JOIN repair.people hp ON hp.id = t.holder_id\nLEFT JOIN repair.people rb ON rb.id = t.resolved_by_id\nLEFT JOIN repair.contractors ct ON ct.id = t.contractor_id\nLEFT JOIN repair.staff asg ON asg.id = t.assignee_id\nLEFT JOIN platform.assets ast ON ast.id = t.asset_id\nWHERE t.id = $2;",
+    "params": [
+      "viewer_id",
+      "id"
+    ]
+  },
+  "repair.ListTickets": {
+    "sql": "\nSELECT\n    t.id, t.ticket_no, t.status, t.closed_reason, t.priority, t.priority_source,\n    t.category_id, c.name AS category_name, c.icon AS category_icon, t.category_other, t.symptom_other,\n    t.building_id, b.name AS building_name,\n    t.floor_id, f.name AS floor_name,\n    t.room_id, rm.name AS room_name,\n    t.location_detail,\n    t.reporter_id, rp.name AS reporter_name, rp.department AS reporter_department,\n    t.holder_id, hp.name AS holder_name, hp.department AS holder_department,\n    t.rating, t.send_back_count,\n    t.expected_done_on, t.assessed_at, t.work_by,\n    t.contractor_id, ct.name AS contractor_name,\n    t.assignee_id, asg.name AS assignee_name, asg.role_name AS assignee_role_name,\n    t.auto_close_at, t.resolved_at, t.closed_at, t.created_at, t.updated_at,\n    EXISTS (SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = $1) AS viewer_subscribed\nFROM repair.tickets t\nLEFT JOIN repair.categories c ON c.id = t.category_id\nJOIN platform.buildings b ON b.id = t.building_id\nJOIN platform.floors f ON f.id = t.floor_id\nLEFT JOIN platform.rooms rm ON rm.id = t.room_id\nJOIN repair.people rp ON rp.id = t.reporter_id\nLEFT JOIN repair.people hp ON hp.id = t.holder_id\nLEFT JOIN repair.contractors ct ON ct.id = t.contractor_id\nLEFT JOIN repair.staff asg ON asg.id = t.assignee_id\nWHERE ($2::boolean OR (\n        ($3::text IN ('all', 'reported') AND t.reporter_id = $1)\n     OR ($3::text IN ('all', 'following') AND EXISTS (\n            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = $1))))\n  AND (cardinality($4::text[]) = 0 OR t.status = ANY($4::text[]))\n  AND (cardinality($5::text[]) = 0 OR (CASE\n        WHEN t.status = 'closed' THEN 'closed'\n        WHEN t.status = 'resolved' THEN 'awaiting_rating'\n        WHEN t.expected_done_on IS NULL THEN 'awaiting_assessment'\n        WHEN t.send_back_count > 0 THEN 'reworking'\n        ELSE 'in_repair' END) = ANY($5::text[]))\n  AND ($6::text IS NULL OR t.closed_reason = $6::text)\n  AND ($7::text IS NULL OR t.ticket_no ILIKE '%' || $7::text || '%'\n       OR t.location_detail ILIKE '%' || $7::text || '%'\n       OR rm.name ILIKE '%' || $7::text || '%')\n  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)\n  AND ($9::timestamptz IS NULL OR t.created_at <= $9::timestamptz)\n  AND ($10::uuid IS NULL OR t.category_id = $10::uuid)\n  \n  AND (cardinality($11::uuid[]) = 0 OR t.building_id = ANY($11::uuid[]))\n  AND ($12::uuid IS NULL OR t.floor_id = $12::uuid)\n  AND ($13::text IS NULL OR t.priority = $13::text)\nORDER BY\n    \n    ($14::boolean AND t.status = 'resolved' AND t.reporter_id = $1) DESC,\n    CASE WHEN $15::text = 'closedAt:desc' THEN t.closed_at END DESC NULLS LAST,\n    CASE WHEN $15::text = 'createdAt:desc' THEN t.created_at END DESC,\n    CASE WHEN $15::text = 'createdAt:asc' THEN t.created_at END ASC,\n    t.updated_at DESC, t.id\nLIMIT $16 OFFSET $17;",
+    "params": [
+      "viewer_id",
+      "scope_all",
+      "relation",
+      "statuses",
+      "steps",
+      "closed_reason",
+      "q",
+      "created_from",
+      "created_to",
+      "category_id",
+      "building_ids",
+      "floor_id",
+      "priority",
+      "awaiting_first",
+      "sort",
+      "page_limit",
+      "page_offset"
+    ]
+  },
+  "repair.ListMyTickets": {
+    "sql": "\n\n\nSELECT\n    t.id, t.ticket_no, t.status, t.closed_reason, t.priority,\n    t.category_id, c.name AS category_name, c.icon AS category_icon, t.category_other,\n    concat_ws(' · ',\n        (SELECT string_agg(sy.name, ' · ' ORDER BY ts.sort_order)\n         FROM repair.ticket_symptoms ts JOIN repair.symptoms sy ON sy.id = ts.symptom_id\n         WHERE ts.ticket_id = t.id),\n        t.symptom_other)::text AS title,\n    t.building_id, b.name AS building_name,\n    t.floor_id, f.name AS floor_name,\n    t.room_id, rm.name AS room_name,\n    t.location_detail,\n    (t.reporter_id = $1)::boolean AS is_reporter,\n    t.rating, t.send_back_count, t.expected_done_on,\n    t.assignee_id, asg.name AS assignee_name, asg.role_name AS assignee_role_name,\n    t.auto_close_at, t.resolved_at, t.updated_at\nFROM repair.tickets t\nLEFT JOIN repair.categories c ON c.id = t.category_id\nJOIN platform.buildings b ON b.id = t.building_id\nJOIN platform.floors f ON f.id = t.floor_id\nLEFT JOIN platform.rooms rm ON rm.id = t.room_id\nLEFT JOIN repair.staff asg ON asg.id = t.assignee_id\nWHERE (($2::text IN ('all', 'reported') AND t.reporter_id = $1)\n     OR ($2::text IN ('all', 'following') AND EXISTS (\n            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = $1)))\n  AND (cardinality($3::text[]) = 0 OR t.status = ANY($3::text[]))\n  AND (cardinality($4::text[]) = 0 OR (CASE\n        WHEN t.status = 'closed' THEN 'closed'\n        WHEN t.status = 'resolved' THEN 'awaiting_rating'\n        WHEN t.expected_done_on IS NULL THEN 'awaiting_assessment'\n        WHEN t.send_back_count > 0 THEN 'reworking'\n        ELSE 'in_repair' END) = ANY($4::text[]))\n  AND ($5::text IS NULL OR t.closed_reason = $5::text)\n  AND ($6::text IS NULL OR t.ticket_no ILIKE '%' || $6::text || '%'\n       OR t.location_detail ILIKE '%' || $6::text || '%'\n       OR rm.name ILIKE '%' || $6::text || '%')\nORDER BY\n    \n    (t.status = 'resolved' AND t.reporter_id = $1) DESC,\n    CASE WHEN $7::text = 'closedAt:desc' THEN t.closed_at END DESC NULLS LAST,\n    CASE WHEN $7::text = 'createdAt:desc' THEN t.created_at END DESC,\n    CASE WHEN $7::text = 'createdAt:asc' THEN t.created_at END ASC,\n    t.updated_at DESC, t.id\nLIMIT $8 OFFSET $9;",
+    "params": [
+      "viewer_id",
+      "relation",
+      "statuses",
+      "steps",
+      "closed_reason",
+      "q",
+      "sort",
+      "page_limit",
+      "page_offset"
+    ]
+  },
+  "repair.CountTickets": {
+    "sql": "SELECT count(*) FROM repair.tickets t\nLEFT JOIN platform.rooms rm ON rm.id = t.room_id\nWHERE ($1::boolean OR (\n        ($2::text IN ('all', 'reported') AND t.reporter_id = $3)\n     OR ($2::text IN ('all', 'following') AND EXISTS (\n            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = $3))))\n  AND (cardinality($4::text[]) = 0 OR t.status = ANY($4::text[]))\n  AND (cardinality($5::text[]) = 0 OR (CASE\n        WHEN t.status = 'closed' THEN 'closed'\n        WHEN t.status = 'resolved' THEN 'awaiting_rating'\n        WHEN t.expected_done_on IS NULL THEN 'awaiting_assessment'\n        WHEN t.send_back_count > 0 THEN 'reworking'\n        ELSE 'in_repair' END) = ANY($5::text[]))\n  AND ($6::text IS NULL OR t.closed_reason = $6::text)\n  AND ($7::text IS NULL OR t.ticket_no ILIKE '%' || $7::text || '%'\n       OR t.location_detail ILIKE '%' || $7::text || '%'\n       OR rm.name ILIKE '%' || $7::text || '%')\n  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)\n  AND ($9::timestamptz IS NULL OR t.created_at <= $9::timestamptz)\n  AND ($10::uuid IS NULL OR t.category_id = $10::uuid)\n  \n  AND (cardinality($11::uuid[]) = 0 OR t.building_id = ANY($11::uuid[]))\n  AND ($12::uuid IS NULL OR t.floor_id = $12::uuid)\n  AND ($13::text IS NULL OR t.priority = $13::text);",
+    "params": [
+      "scope_all",
+      "relation",
+      "viewer_id",
+      "statuses",
+      "steps",
+      "closed_reason",
+      "q",
+      "created_from",
+      "created_to",
+      "category_id",
+      "building_ids",
+      "floor_id",
+      "priority"
+    ]
+  },
+  "repair.CountTicketsByStatus": {
+    "sql": "SELECT\n    count(*) FILTER (WHERE t.status = 'in_progress') AS in_progress_count,\n    count(*) FILTER (WHERE t.status = 'resolved') AS resolved_count,\n    count(*) FILTER (WHERE t.status = 'closed') AS closed_count,\n    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NULL) AS awaiting_assessment_count,\n    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NOT NULL) AS in_repair_count,\n    count(*) FILTER (WHERE t.status = 'resolved' AND t.reporter_id = $1) AS awaiting_my_confirmation_count\nFROM repair.tickets t\nLEFT JOIN platform.rooms rm ON rm.id = t.room_id\nWHERE ($2::boolean OR (\n        ($3::text IN ('all', 'reported') AND t.reporter_id = $1)\n     OR ($3::text IN ('all', 'following') AND EXISTS (\n            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = $1))))\n  AND ($4::text IS NULL OR t.closed_reason = $4::text)\n  AND ($5::text IS NULL OR t.ticket_no ILIKE '%' || $5::text || '%'\n       OR t.location_detail ILIKE '%' || $5::text || '%'\n       OR rm.name ILIKE '%' || $5::text || '%')\n  AND ($6::timestamptz IS NULL OR t.created_at >= $6::timestamptz)\n  AND ($7::timestamptz IS NULL OR t.created_at <= $7::timestamptz)\n  AND ($8::uuid IS NULL OR t.category_id = $8::uuid)\n  \n  AND (cardinality($9::uuid[]) = 0 OR t.building_id = ANY($9::uuid[]))\n  AND ($10::uuid IS NULL OR t.floor_id = $10::uuid)\n  AND ($11::text IS NULL OR t.priority = $11::text);",
+    "params": [
+      "viewer_id",
+      "scope_all",
+      "relation",
+      "closed_reason",
+      "q",
+      "created_from",
+      "created_to",
+      "category_id",
+      "building_ids",
+      "floor_id",
+      "priority"
+    ]
+  },
+  "repair.ListSymptomsForTickets": {
+    "sql": "SELECT ts.ticket_id, s.id, s.name FROM repair.ticket_symptoms ts\nJOIN repair.symptoms s ON s.id = ts.symptom_id\nWHERE ts.ticket_id = ANY($1::uuid[])\nORDER BY ts.ticket_id, ts.sort_order;",
+    "params": [
+      "ticket_ids"
+    ]
+  },
+  "repair.FirstReportPhotos": {
+    "sql": "SELECT DISTINCT ON (ticket_id) ticket_id, photo_id FROM repair.ticket_photos\nWHERE ticket_id = ANY($1::uuid[]) AND kind = 'report'\nORDER BY ticket_id, sort_order;",
+    "params": [
+      "ticket_ids"
+    ]
+  },
+  "repair.ListTicketEvents": {
+    "sql": "SELECT e.id, e.type, e.actor_id, ap.name AS actor_name, ap.department AS actor_department,\n       e.note, e.data, e.created_at\nFROM repair.ticket_events e\nLEFT JOIN repair.people ap ON ap.id = e.actor_id\nWHERE e.ticket_id = $1\nORDER BY e.created_at DESC, e.id DESC;",
+    "params": [
+      "ticket_id"
+    ]
+  },
+  "repair.GetTicketAccess": {
+    "sql": "\nSELECT t.reporter_id, t.holder_id,\n       EXISTS (SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = $1) AS viewer_subscribed\nFROM repair.tickets t\nWHERE t.id = $2;",
+    "params": [
+      "viewer_id",
+      "id"
+    ]
+  },
+  "repair.LockTicket": {
+    "sql": "\nSELECT id, status, closed_reason, reporter_id, expected_done_on, work_by, contractor_id, contractor_rating, send_back_count FROM repair.tickets\nWHERE id = $1\nFOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "repair.AssessTicket": {
+    "sql": "\n\nUPDATE repair.tickets\nSET expected_done_on = $1, holder_id = $2,\n    work_by = $3,\n    contractor_rating = CASE WHEN contractor_id IS NOT DISTINCT FROM $4::uuid THEN contractor_rating END,\n    contractor_rating_comment = CASE WHEN contractor_id IS NOT DISTINCT FROM $4::uuid THEN contractor_rating_comment END,\n    contractor_id = $4::uuid,\n    assignee_id = $5::uuid,\n    assessed_at = COALESCE(assessed_at, $6), updated_at = $6\nWHERE id = $7;",
+    "params": [
+      "expected_done_on",
+      "technician_id",
+      "work_by",
+      "contractor_id",
+      "assignee_id",
+      "now",
+      "id"
+    ]
+  },
+  "repair.ResolveTicket": {
+    "sql": "UPDATE repair.tickets\nSET status = 'resolved', result_note = $1, resolved_by_id = $2, holder_id = $2,\n    contractor_rating = COALESCE($3::smallint, contractor_rating),\n    contractor_rating_comment = CASE WHEN $3::smallint IS NULL THEN contractor_rating_comment\n                                     ELSE $4::text END,\n    resolved_at = $5, auto_close_at = $6, updated_at = $5\nWHERE id = $7;",
+    "params": [
+      "note",
+      "technician_id",
+      "contractor_rating",
+      "contractor_rating_comment",
+      "now",
+      "auto_close_at",
+      "id"
+    ]
+  },
+  "repair.ConfirmTicket": {
+    "sql": "UPDATE repair.tickets\nSET status = 'closed', closed_reason = 'confirmed', rating = $1, rating_comment = $2::text,\n    closed_at = $3, auto_close_at = NULL, updated_at = $3\nWHERE id = $4;",
+    "params": [
+      "rating",
+      "rating_comment",
+      "now",
+      "id"
+    ]
+  },
+  "repair.AdminCloseTicket": {
+    "sql": "\nUPDATE repair.tickets\nSET status = 'closed', closed_reason = 'admin_closed', closed_at = $1, auto_close_at = NULL, updated_at = $1\nWHERE id = $2;",
+    "params": [
+      "now",
+      "id"
+    ]
+  },
+  "repair.SendBackTicket": {
+    "sql": "UPDATE repair.tickets\nSET status = 'in_progress', send_back_count = send_back_count + 1, auto_close_at = NULL, updated_at = $1\nWHERE id = $2;",
+    "params": [
+      "now",
+      "id"
+    ]
+  },
+  "repair.HandOverTicket": {
+    "sql": "\nUPDATE repair.tickets\nSET status = 'in_progress', closed_reason = NULL, closed_at = NULL, updated_at = $1\nWHERE id = $2;",
+    "params": [
+      "now",
+      "id"
+    ]
+  },
+  "repair.AutoCloseDueTickets": {
+    "sql": "\nUPDATE repair.tickets\nSET status = 'closed', closed_reason = 'auto_closed', closed_at = $1, auto_close_at = NULL, updated_at = $1\nWHERE status = 'resolved' AND auto_close_at <= $1\nRETURNING id;",
+    "params": [
+      "now"
+    ]
+  },
+  "repair.InsertAutoClosedEvents": {
+    "sql": "INSERT INTO repair.ticket_events (ticket_id, type, created_at)\nSELECT unnest($1::uuid[]), 'auto_closed', $2;",
+    "params": [
+      "ticket_ids",
+      "now"
+    ]
+  },
+  "repair.ListRecentPlaces": {
+    "sql": "\n\nSELECT p.building_id, p.building_name, p.floor_id, p.floor_name, p.room_id, p.room_name,\n       p.location_detail, p.last_reported_at\nFROM (\n    SELECT DISTINCT ON (t.building_id, t.floor_id, t.room_id)\n        t.building_id, b.name AS building_name, t.floor_id, f.name AS floor_name,\n        t.room_id, rm.name AS room_name, t.location_detail, t.created_at AS last_reported_at\n    FROM repair.tickets t\n    JOIN platform.buildings b ON b.id = t.building_id AND b.is_active\n    JOIN platform.floors f ON f.id = t.floor_id AND f.is_active\n    JOIN platform.rooms rm ON rm.id = t.room_id AND rm.is_active AND rm.floor_id = t.floor_id\n    WHERE t.reporter_id = $1\n    ORDER BY t.building_id, t.floor_id, t.room_id, t.created_at DESC\n) p\nORDER BY p.last_reported_at DESC\nLIMIT 3;",
+    "params": [
+      "reporter_id"
+    ]
+  },
+  "repair.LockDuplicateKey": {
+    "sql": "\n\nSELECT pg_advisory_xact_lock(hashtextextended($1::text, 0));",
+    "params": [
+      "key"
+    ]
+  },
+  "repair.ListDuplicateTickets": {
+    "sql": "\n\n\n\n\n\nSELECT t.id, t.reporter_id, t.status,\n       (CASE WHEN t.room_id IS NULL THEN $1::text = ''\n             ELSE $1::text = '' OR lower(regexp_replace(btrim(coalesce(t.location_detail, '')), '\\s+', ' ', 'g')) = $1::text\n        END)::boolean AS blocks_report\nFROM repair.tickets t\nWHERE t.status IN ('in_progress', 'resolved')\n  AND t.category_id = $2 AND t.floor_id = $3\n  AND (t.room_id = $4\n       OR (t.room_id IS NULL AND lower(btrim(t.location_detail)) =\n           (SELECT lower(btrim(rm.name)) FROM platform.rooms rm WHERE rm.id = $4)))\nORDER BY blocks_report DESC, t.created_at DESC, t.id\nLIMIT $5;",
+    "params": [
+      "spot",
+      "category_id",
+      "floor_id",
+      "room_id",
+      "max_rows"
+    ]
+  },
+  "repair.InsertSubscriber": {
+    "sql": "\nINSERT INTO repair.ticket_subscribers (ticket_id, user_id, created_at, updated_at)\nVALUES ($1, $2, $3, $3)\nON CONFLICT (ticket_id, user_id) DO NOTHING;",
+    "params": [
+      "ticket_id",
+      "user_id",
+      "now"
+    ]
+  },
+  "repair.ListTechnicians": {
+    "sql": "\nSELECT st.id, st.name, st.role_name\nFROM repair.staff st\nWHERE st.role_key = 'super_admin' OR EXISTS (\n    SELECT 1 FROM platform.role_permissions rp JOIN platform.roles r ON r.id = rp.role_id\n    WHERE r.key = st.role_key AND rp.permission = 'repair.ticket.work')\nORDER BY st.name COLLATE \"th-x-icu\", st.id;",
+    "params": []
+  },
+  "repair.IsTechnician": {
+    "sql": "\nSELECT EXISTS (\n    SELECT 1 FROM repair.staff st\n    WHERE st.id = $1 AND (st.role_key = 'super_admin' OR EXISTS (\n        SELECT 1 FROM platform.role_permissions rp JOIN platform.roles r ON r.id = rp.role_id\n        WHERE r.key = st.role_key AND rp.permission = 'repair.ticket.work')))::boolean;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.ListRoomAssets": {
+    "sql": "SELECT a.id, a.code, a.name, a.is_active, a.room_id, (a.pos_x IS NOT NULL)::boolean AS placed, a.updated_at,\n       a.label_snapshot, a.label_printed_at, r.name AS room_name, f.name AS floor_name, b.name AS building_name,\n       t.id AS type_id, t.key AS type_key, t.name AS type_name, t.icon AS type_icon,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.assets a\nJOIN platform.asset_types t ON t.id = a.asset_type_id\nJOIN platform.rooms r ON r.id = a.room_id\nJOIN platform.floors f ON f.id = r.floor_id\nJOIN platform.buildings b ON b.id = f.building_id\nLEFT JOIN platform.users ub ON ub.id = a.updated_by\nWHERE a.room_id = $1\n  AND ($2::boolean OR a.is_active)\n  AND ($3::uuid IS NULL OR a.asset_type_id = $3::uuid)\n  AND ($4::text IS NULL OR a.code ILIKE '%' || $4::text || '%' OR a.name ILIKE '%' || $4::text || '%')\nORDER BY lower(a.code);",
+    "params": [
+      "room_id",
+      "include_inactive",
+      "asset_type_id",
+      "q"
+    ]
+  },
+  "platform.GetAssetAdmin": {
+    "sql": "SELECT a.id, a.code, a.name, a.is_active, a.room_id, (a.pos_x IS NOT NULL)::boolean AS placed, a.updated_at,\n       a.label_snapshot, a.label_printed_at, r.name AS room_name, f.name AS floor_name, b.name AS building_name,\n       t.id AS type_id, t.key AS type_key, t.name AS type_name, t.icon AS type_icon,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.assets a\nJOIN platform.asset_types t ON t.id = a.asset_type_id\nJOIN platform.rooms r ON r.id = a.room_id\nJOIN platform.floors f ON f.id = r.floor_id\nJOIN platform.buildings b ON b.id = f.building_id\nLEFT JOIN platform.users ub ON ub.id = a.updated_by\nWHERE a.id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.LockAssetAdmin": {
+    "sql": "SELECT id, code, name, asset_type_id, room_id, is_active, updated_at, (label_printed_at IS NOT NULL)::boolean AS label_printed\nFROM platform.assets WHERE id = $1 FOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.AssetCodeInUse": {
+    "sql": "\nSELECT EXISTS (SELECT 1 FROM platform.assets WHERE lower(code) = lower($1::text) AND id <> $2)::boolean;",
+    "params": [
+      "code",
+      "self_id"
+    ]
+  },
+  "platform.InsertAssetAdmin": {
+    "sql": "INSERT INTO platform.assets (id, code, name, asset_type_id, room_id, created_by, updated_by)\nVALUES ($1, $2, $3, $4, $5, $6, $6);",
+    "params": [
+      "id",
+      "code",
+      "name",
+      "asset_type_id",
+      "room_id",
+      "actor_id"
+    ]
+  },
+  "platform.UpdateAssetAdmin": {
+    "sql": "\nUPDATE platform.assets SET\n    code = $1, name = $2, is_active = $3,\n    pos_x = CASE WHEN room_id = $4 THEN pos_x END,\n    pos_z = CASE WHEN room_id = $4 THEN pos_z END,\n    room_id = $4,\n    updated_by = $5, updated_at = now()\nWHERE id = $6;",
+    "params": [
+      "code",
+      "name",
+      "is_active",
+      "room_id",
+      "actor_id",
+      "id"
+    ]
+  },
+  "platform.AssetCodesStartingWith": {
+    "sql": "SELECT code FROM platform.assets WHERE lower(code) LIKE lower($1::text) || '%';",
+    "params": [
+      "prefix"
+    ]
+  },
+  "platform.ListAssetTypesAdmin": {
+    "sql": "SELECT t.id, t.key, t.name, t.code_prefix, t.icon, t.mount, t.sort_order, t.updated_at,\n       (SELECT count(*) FROM platform.assets a WHERE a.asset_type_id = t.id AND a.is_active)::bigint AS active_asset_count,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.asset_types t\nLEFT JOIN platform.users ub ON ub.id = t.updated_by_id\nWHERE t.is_active\nORDER BY t.sort_order, t.name;",
+    "params": []
+  },
+  "platform.GetActiveAssetType": {
+    "sql": "SELECT id, key, name, code_prefix, icon, mount, updated_at FROM platform.asset_types WHERE id = $1 AND is_active;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.LockAssetType": {
+    "sql": "SELECT id, key, name, code_prefix, icon, mount, updated_at FROM platform.asset_types WHERE id = $1 AND is_active FOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.AssetTypeNameInUse": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM platform.asset_types WHERE lower(name) = lower($1::text) AND id <> $2)::boolean;",
+    "params": [
+      "name",
+      "self_id"
+    ]
+  },
+  "platform.AssetTypePrefixInUse": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM platform.asset_types WHERE upper(code_prefix) = upper($1::text) AND id <> $2)::boolean;",
+    "params": [
+      "code_prefix",
+      "self_id"
+    ]
+  },
+  "platform.InsertAssetType": {
+    "sql": "\nINSERT INTO platform.asset_types (id, key, name, code_prefix, icon, mount, sort_order, updated_by_id)\nVALUES ($1, $2, $3, $4, $5, $6,\n        (SELECT coalesce(max(sort_order), 0) + 1 FROM platform.asset_types), $7);",
+    "params": [
+      "id",
+      "key",
+      "name",
+      "code_prefix",
+      "icon",
+      "mount",
+      "actor_id"
+    ]
+  },
+  "platform.UpdateAssetType": {
+    "sql": "UPDATE platform.asset_types SET name = $1, code_prefix = $2, icon = $3, mount = $4,\n    updated_by_id = $5, updated_at = now()\nWHERE id = $6;\n\n",
+    "params": [
+      "name",
+      "code_prefix",
+      "icon",
+      "mount",
+      "actor_id",
+      "id"
+    ]
+  },
+  "platform.ActiveBuildingExists": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM platform.buildings WHERE id = $1 AND is_active)::boolean;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.ListLabelAssets": {
+    "sql": "\nSELECT a.id, a.code, a.name, a.label_snapshot, a.label_printed_at,\n       b.id AS building_id, b.name AS building_name, f.id AS floor_id, f.name AS floor_name, f.level AS floor_level,\n       r.id AS room_id, r.name AS room_name\nFROM platform.assets a\nJOIN platform.rooms r ON r.id = a.room_id AND r.is_active\nJOIN platform.floors f ON f.id = r.floor_id AND f.is_active\nJOIN platform.buildings b ON b.id = f.building_id\nWHERE b.id = $1 AND a.is_active\n  AND ($2::uuid IS NULL OR f.id = $2::uuid)\n  AND ($3::uuid IS NULL OR r.id = $3::uuid)\nORDER BY f.level, r.name, lower(a.code);",
+    "params": [
+      "building_id",
+      "floor_id",
+      "room_id"
+    ]
+  },
+  "platform.LockLabelAssets": {
+    "sql": "\nSELECT a.id, a.code, a.name, b.id AS building_id, b.name AS building_name, f.id AS floor_id, f.name AS floor_name,\n       r.id AS room_id, r.name AS room_name\nFROM platform.assets a\nJOIN platform.rooms r ON r.id = a.room_id\nJOIN platform.floors f ON f.id = r.floor_id\nJOIN platform.buildings b ON b.id = f.building_id\nWHERE a.id = ANY($1::uuid[]) AND a.is_active\nFOR UPDATE OF a;",
+    "params": [
+      "ids"
+    ]
+  },
+  "platform.MarkLabelPrinted": {
+    "sql": "\nUPDATE platform.assets SET label_snapshot = $1, label_printed_at = now(), label_printed_by = $2\nWHERE id = $3;",
+    "params": [
+      "snapshot",
+      "actor_id",
+      "id"
+    ]
+  },
+  "platform.ListAudit": {
+    "sql": "SELECT a.id, a.created_at, a.action, a.target_type, a.target_id, a.data,\n       a.actor_user_id, au.employee_code AS actor_employee_code, au.first_name_th AS actor_first_name_th,\n       au.last_name_th AS actor_last_name_th, au.first_name_en AS actor_first_name_en,\n       au.last_name_en AS actor_last_name_en, au.department AS actor_department,\n       NOT EXISTS (SELECT 1 FROM platform.audit_log d\n                   WHERE d.target_type = a.target_type AND d.target_id = a.target_id AND d.action = 'delete')::boolean AS entity_exists\nFROM platform.audit_log a\nLEFT JOIN platform.users au ON au.id = a.actor_user_id\nWHERE a.target_type = ANY($1::text[])\n  AND a.action = ANY($2::text[])\n  AND ($3::uuid IS NULL OR a.actor_user_id = $3::uuid)\n  AND ($4::timestamptz IS NULL OR a.created_at >= $4::timestamptz)\n  AND ($5::timestamptz IS NULL OR a.created_at <= $5::timestamptz)\n  AND ($6::text IS NULL\n       OR a.data->>'entityName' ILIKE '%' || $6::text || '%'\n       OR a.data->>'parentName' ILIKE '%' || $6::text || '%')\nORDER BY a.created_at DESC, a.id\nLIMIT $7 OFFSET $8;",
+    "params": [
+      "types",
+      "actions",
+      "actor_id",
+      "from_time",
+      "to_time",
+      "q",
+      "lim",
+      "off"
+    ]
+  },
+  "platform.CountAudit": {
+    "sql": "SELECT count(*)::bigint\nFROM platform.audit_log a\nWHERE a.target_type = ANY($1::text[])\n  AND a.action = ANY($2::text[])\n  AND ($3::uuid IS NULL OR a.actor_user_id = $3::uuid)\n  AND ($4::timestamptz IS NULL OR a.created_at >= $4::timestamptz)\n  AND ($5::timestamptz IS NULL OR a.created_at <= $5::timestamptz)\n  AND ($6::text IS NULL\n       OR a.data->>'entityName' ILIKE '%' || $6::text || '%'\n       OR a.data->>'parentName' ILIKE '%' || $6::text || '%');",
+    "params": [
+      "types",
+      "actions",
+      "actor_id",
+      "from_time",
+      "to_time",
+      "q"
+    ]
+  },
+  "platform.ListAuditActors": {
+    "sql": "\nSELECT u.id, u.employee_code, u.first_name_th, u.last_name_th, u.first_name_en, u.last_name_en, u.department\nFROM platform.users u\nWHERE u.id IN (SELECT a.actor_user_id FROM platform.audit_log a\n               WHERE a.target_type = ANY($1::text[]) AND a.action = ANY($2::text[]))\nORDER BY concat_ws(' ', u.first_name_th, u.last_name_th) COLLATE \"th-x-icu\", u.employee_code;",
+    "params": [
+      "types",
+      "actions"
+    ]
+  },
+  "platform.ListUserRoleHistory": {
+    "sql": "\nSELECT a.created_at, a.data,\n       a.actor_user_id, au.employee_code AS actor_employee_code, au.first_name_th AS actor_first_name_th,\n       au.last_name_th AS actor_last_name_th, au.first_name_en AS actor_first_name_en,\n       au.last_name_en AS actor_last_name_en, au.department AS actor_department\nFROM platform.audit_log a\nLEFT JOIN platform.users au ON au.id = a.actor_user_id\nWHERE a.target_type = 'user' AND a.target_id = $1 AND a.action = 'role_change'\nORDER BY a.created_at DESC\nLIMIT 50;",
+    "params": [
+      "target_id"
+    ]
+  },
+  "platform.ListPlanBuildings": {
+    "sql": "SELECT b.id, b.name, b.updated_at, bt.id AS building_type_id, bt.name AS building_type_name,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.buildings b\nJOIN platform.building_types bt ON bt.id = b.building_type_id\nLEFT JOIN platform.users ub ON ub.id = b.updated_by_id\nWHERE b.is_active\nORDER BY b.sort_order, b.name;",
+    "params": []
+  },
+  "platform.ListPlanFloors": {
+    "sql": "\nSELECT f.id, f.building_id, f.name, f.level\nFROM platform.floors f\nJOIN platform.buildings b ON b.id = f.building_id AND b.is_active\nWHERE f.is_active\nORDER BY f.building_id, f.level;",
+    "params": []
+  },
+  "platform.ListPlanRooms": {
+    "sql": "SELECT r.id, r.floor_id, r.name, r.area_type, r.updated_at,\n       (SELECT count(*) FROM platform.assets a WHERE a.room_id = r.id AND a.is_active)::bigint AS active_asset_count,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.rooms r\nJOIN platform.floors f ON f.id = r.floor_id AND f.is_active\nLEFT JOIN platform.users ub ON ub.id = r.updated_by_id\nWHERE r.is_active\nORDER BY r.floor_id, r.sort_order, r.name;",
+    "params": []
+  },
+  "platform.LockBuilding": {
+    "sql": "SELECT b.id, b.name, b.updated_at, b.building_type_id, bt.name AS building_type_name\nFROM platform.buildings b JOIN platform.building_types bt ON bt.id = b.building_type_id\nWHERE b.id = $1 AND b.is_active FOR UPDATE OF b;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.BuildingNameTaken": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM platform.buildings WHERE lower(name) = lower($1::text) AND id <> $2)::boolean;",
+    "params": [
+      "name",
+      "self_id"
+    ]
+  },
+  "platform.UpdateBuilding": {
+    "sql": "\nUPDATE platform.buildings SET name = $1, building_type_id = $2, updated_by_id = $3, updated_at = now() WHERE id = $4;",
+    "params": [
+      "name",
+      "building_type_id",
+      "actor_id",
+      "id"
+    ]
+  },
+  "platform.LockRoom": {
+    "sql": "\nSELECT r.id, r.floor_id, r.name, r.updated_at, f.name AS floor_name, b.name AS building_name\nFROM platform.rooms r\nJOIN platform.floors f ON f.id = r.floor_id\nJOIN platform.buildings b ON b.id = f.building_id\nWHERE r.id = $1 AND r.is_active\nFOR UPDATE OF r;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.RoomNameTaken": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM platform.rooms WHERE floor_id = $1 AND lower(name) = lower($2::text) AND id <> $3)::boolean;",
+    "params": [
+      "floor_id",
+      "name",
+      "self_id"
+    ]
+  },
+  "platform.RenameRoom": {
+    "sql": "UPDATE platform.rooms SET name = $1, updated_by_id = $2, updated_at = now() WHERE id = $3;",
+    "params": [
+      "name",
+      "actor_id",
+      "id"
+    ]
+  },
+  "platform.GetRoomPlace": {
+    "sql": "\nSELECT r.id, r.floor_id, r.name, f.name AS floor_name, b.id AS building_id, b.name AS building_name\nFROM platform.rooms r\nJOIN platform.floors f ON f.id = r.floor_id AND f.is_active\nJOIN platform.buildings b ON b.id = f.building_id AND b.is_active\nWHERE r.id = $1 AND r.is_active;\n\n",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.ListBuildingTypes": {
+    "sql": "\nSELECT t.id, t.name, t.sort_order, t.is_active, t.updated_at,\n       (SELECT count(*) FROM platform.buildings b WHERE b.building_type_id = t.id AND b.is_active)::bigint AS building_count,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.building_types t\nLEFT JOIN platform.users ub ON ub.id = t.updated_by_id\nORDER BY t.is_active DESC, t.sort_order, t.name;",
+    "params": []
+  },
+  "platform.GetActiveBuildingType": {
+    "sql": "SELECT id, name FROM platform.building_types WHERE id = $1 AND is_active;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.LockBuildingType": {
+    "sql": "SELECT t.id, t.name, t.is_active, t.updated_at,\n       (EXISTS (SELECT 1 FROM platform.buildings b WHERE b.building_type_id = t.id AND b.is_active))::boolean AS in_use\nFROM platform.building_types t WHERE t.id = $1 FOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.BuildingTypeNameTaken": {
+    "sql": "SELECT EXISTS (SELECT 1 FROM platform.building_types WHERE lower(name) = lower($1::text) AND id <> $2)::boolean;",
+    "params": [
+      "name",
+      "self_id"
+    ]
+  },
+  "platform.InsertBuildingType": {
+    "sql": "\nINSERT INTO platform.building_types (id, name, sort_order, updated_by_id)\nVALUES ($1, $2, (SELECT coalesce(max(sort_order), 0) + 1 FROM platform.building_types), $3);",
+    "params": [
+      "id",
+      "name",
+      "actor_id"
+    ]
+  },
+  "platform.UpdateBuildingType": {
+    "sql": "UPDATE platform.building_types SET name = $1, is_active = $2, updated_by_id = $3, updated_at = now() WHERE id = $4;",
+    "params": [
+      "name",
+      "is_active",
+      "actor_id",
+      "id"
+    ]
+  },
+  "platform.ListRoles": {
+    "sql": "\nSELECT r.*,\n       (SELECT count(*) FROM platform.users u\n        LEFT JOIN platform.user_roles ur ON ur.employee_code = u.employee_code\n        WHERE NOT u.is_demo AND (ur.role_id = r.id OR (ur.role_id IS NULL AND r.key = 'employee')))::bigint AS user_count,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.roles r\nLEFT JOIN platform.users ub ON ub.id = r.updated_by_id\nORDER BY r.sort_order, r.created_at, r.key;",
+    "params": []
+  },
+  "platform.GetRoleByKey": {
+    "sql": "SELECT * FROM platform.roles WHERE key = $1;",
+    "params": [
+      "key"
+    ]
+  },
+  "platform.ListRolePermissions": {
+    "sql": "SELECT permission FROM platform.role_permissions WHERE role_id = $1 ORDER BY permission;\n\n",
+    "params": [
+      "role_id"
+    ]
+  },
+  "platform.LockRole": {
+    "sql": "SELECT * FROM platform.roles WHERE id = $1 FOR UPDATE;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.InsertRole": {
+    "sql": "INSERT INTO platform.roles (key, name, description, created_by_id, updated_by_id)\nVALUES ($1, $2, $3, $4, $4)\nRETURNING *;",
+    "params": [
+      "key",
+      "name",
+      "description",
+      "actor_id"
+    ]
+  },
+  "platform.UpdateRole": {
+    "sql": "UPDATE platform.roles\nSET name = $1, description = $2, updated_by_id = $3, updated_at = now()\nWHERE id = $4\nRETURNING *;",
+    "params": [
+      "name",
+      "description",
+      "actor_id",
+      "id"
+    ]
+  },
+  "platform.DeleteRole": {
+    "sql": "DELETE FROM platform.roles WHERE id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.CountRealUsersInRole": {
+    "sql": "\nSELECT count(*)::bigint FROM platform.users u\nLEFT JOIN platform.user_roles ur ON ur.employee_code = u.employee_code\nWHERE NOT u.is_demo AND (ur.role_id = $1 OR (ur.role_id IS NULL AND $2::text = 'employee'));",
+    "params": [
+      "role_id",
+      "role_key"
+    ]
+  },
+  "platform.DeleteDemoUserRoles": {
+    "sql": "\nDELETE FROM platform.user_roles ur\nUSING platform.users u\nWHERE u.employee_code = ur.employee_code AND u.is_demo AND ur.role_id = $1\nRETURNING ur.employee_code;",
+    "params": [
+      "role_id"
+    ]
+  },
+  "platform.DeleteDemoUser": {
+    "sql": "DELETE FROM platform.users WHERE employee_code = $1 AND is_demo;",
+    "params": [
+      "employee_code"
+    ]
+  },
+  "platform.ListAllRolePermissions": {
+    "sql": "SELECT role_id, permission FROM platform.role_permissions ORDER BY role_id, permission;",
+    "params": []
+  },
+  "platform.GrantRolePermission": {
+    "sql": "INSERT INTO platform.role_permissions (role_id, permission) VALUES ($1, $2)\nON CONFLICT DO NOTHING;",
+    "params": [
+      "role_id",
+      "permission"
+    ]
+  },
+  "platform.RevokeRolePermission": {
+    "sql": "DELETE FROM platform.role_permissions WHERE role_id = $1 AND permission = $2;",
+    "params": [
+      "role_id",
+      "permission"
+    ]
+  },
+  "platform.GetPermissionMatrix": {
+    "sql": "SELECT m.version, m.updated_at,\n       ub.id AS updated_by_user_id, ub.employee_code AS updated_by_employee_code,\n       ub.first_name_th AS updated_by_first_name_th, ub.last_name_th AS updated_by_last_name_th,\n       ub.first_name_en AS updated_by_first_name_en, ub.last_name_en AS updated_by_last_name_en,\n       ub.department AS updated_by_department\nFROM platform.permission_matrix m\nLEFT JOIN platform.users ub ON ub.id = m.updated_by_id;",
+    "params": []
+  },
+  "platform.LockPermissionMatrix": {
+    "sql": "\nSELECT version FROM platform.permission_matrix FOR UPDATE;",
+    "params": []
+  },
+  "platform.BumpPermissionMatrix": {
+    "sql": "UPDATE platform.permission_matrix SET version = version + 1, updated_by_id = $1, updated_at = now();",
+    "params": [
+      "actor_id"
+    ]
+  },
+  "platform.CreateSession": {
+    "sql": "INSERT INTO platform.sessions (token_hash, user_id, origin_user_id, expires_at)\nVALUES ($1, $2, $3, $4)\nRETURNING *;",
+    "params": [
+      "token_hash",
+      "user_id",
+      "origin_user_id",
+      "expires_at"
+    ]
+  },
+  "platform.GetActiveSession": {
+    "sql": "SELECT * FROM platform.sessions\nWHERE token_hash = $1 AND expires_at > now();",
+    "params": [
+      "token_hash"
+    ]
+  },
+  "platform.DeleteSessionByTokenHash": {
+    "sql": "DELETE FROM platform.sessions WHERE token_hash = $1;",
+    "params": [
+      "token_hash"
+    ]
+  },
+  "platform.DeleteExpiredSessions": {
+    "sql": "DELETE FROM platform.sessions WHERE expires_at <= now();",
+    "params": []
+  },
+  "platform.UpsertSSOUser": {
+    "sql": "INSERT INTO platform.users (\n    employee_code, sso_subject, first_name_th, last_name_th, first_name_en, last_name_en,\n    email, department, division, position_th, last_login_at\n) VALUES (\n    $1, $2, $3, $4, $5, $6,\n    $7, $8, $9, $10, now()\n)\nON CONFLICT (employee_code) DO UPDATE SET\n    sso_subject   = EXCLUDED.sso_subject,\n    first_name_th = EXCLUDED.first_name_th,\n    last_name_th  = EXCLUDED.last_name_th,\n    first_name_en = EXCLUDED.first_name_en,\n    last_name_en  = EXCLUDED.last_name_en,\n    email         = EXCLUDED.email,\n    department    = EXCLUDED.department,\n    division      = EXCLUDED.division,\n    position_th   = EXCLUDED.position_th,\n    last_login_at = now(),\n    updated_at    = now()\nRETURNING *;",
+    "params": [
+      "employee_code",
+      "sso_subject",
+      "first_name_th",
+      "last_name_th",
+      "first_name_en",
+      "last_name_en",
+      "email",
+      "department",
+      "division",
+      "position_th"
+    ]
+  },
+  "platform.UpsertDemoUser": {
+    "sql": "INSERT INTO platform.users (employee_code, first_name_th, last_name_th, department, position_th, is_demo)\nVALUES ($1, $2, $3, $4, $5, true)\nON CONFLICT (employee_code) DO UPDATE SET\n    first_name_th = EXCLUDED.first_name_th,\n    last_name_th  = EXCLUDED.last_name_th,\n    department    = EXCLUDED.department,\n    position_th   = EXCLUDED.position_th,\n    is_demo       = true,\n    updated_at    = now()\nRETURNING *;\n\n\n",
+    "params": [
+      "employee_code",
+      "first_name_th",
+      "last_name_th",
+      "department",
+      "position_th"
+    ]
+  },
+  "platform.GetUserWithRole": {
+    "sql": "SELECT u.*, r.key AS role, r.name AS role_name,\n       ARRAY(SELECT rp.permission FROM platform.role_permissions rp WHERE rp.role_id = r.id ORDER BY rp.permission)::text[] AS permissions\nFROM platform.users u\nLEFT JOIN platform.user_roles ur ON ur.employee_code = u.employee_code\nJOIN platform.roles r ON r.id = ur.role_id OR (ur.role_id IS NULL AND r.key = 'employee')\nWHERE u.id = $1;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.ListDemoUsers": {
+    "sql": "SELECT u.*, r.key AS role\nFROM platform.users u\nLEFT JOIN platform.user_roles ur ON ur.employee_code = u.employee_code\nJOIN platform.roles r ON r.id = ur.role_id OR (ur.role_id IS NULL AND r.key = 'employee')\nWHERE u.is_demo\nORDER BY u.employee_code;",
+    "params": []
+  },
+  "platform.UpsertUserRole": {
+    "sql": "\nINSERT INTO platform.user_roles (employee_code, role_id)\nSELECT $1, r.id FROM platform.roles r WHERE r.key = $2\nON CONFLICT (employee_code) DO UPDATE SET role_id = EXCLUDED.role_id, updated_at = now();",
+    "params": [
+      "employee_code",
+      "role_key"
+    ]
+  },
+  "platform.InsertAuditLog": {
+    "sql": "INSERT INTO platform.audit_log (actor_user_id, action, target_type, target_id, data)\nVALUES ($1, $2, $3, $4, $5);\n\n\n",
+    "params": [
+      "actor_user_id",
+      "action",
+      "target_type",
+      "target_id",
+      "data"
+    ]
+  },
+  "platform.SearchUsers": {
+    "sql": "\nSELECT u.*, r.id AS role_id, r.key AS role_key, r.name AS role_name\nFROM platform.users u\nLEFT JOIN platform.user_roles ur ON ur.employee_code = u.employee_code\nJOIN platform.roles r ON r.id = ur.role_id OR (ur.role_id IS NULL AND r.key = 'employee')\nWHERE NOT u.is_demo\n  AND ($1::uuid IS NULL OR r.id = $1::uuid)\n  AND ($2::text IS NULL\n       OR concat_ws(' ', u.first_name_th, u.last_name_th) ILIKE '%' || $2::text || '%'\n       OR concat_ws(' ', u.first_name_en, u.last_name_en) ILIKE '%' || $2::text || '%'\n       OR u.employee_code ILIKE '%' || $2::text || '%'\n       OR u.email ILIKE '%' || $2::text || '%')\nORDER BY concat_ws(' ', u.first_name_th, u.last_name_th) COLLATE \"th-x-icu\", u.employee_code\nLIMIT $3 OFFSET $4;",
+    "params": [
+      "role_id",
+      "q",
+      "lim",
+      "off"
+    ]
+  },
+  "platform.CountUsers": {
+    "sql": "SELECT count(*)::bigint\nFROM platform.users u\nLEFT JOIN platform.user_roles ur ON ur.employee_code = u.employee_code\nJOIN platform.roles r ON r.id = ur.role_id OR (ur.role_id IS NULL AND r.key = 'employee')\nWHERE NOT u.is_demo\n  AND ($1::uuid IS NULL OR r.id = $1::uuid)\n  AND ($2::text IS NULL\n       OR concat_ws(' ', u.first_name_th, u.last_name_th) ILIKE '%' || $2::text || '%'\n       OR concat_ws(' ', u.first_name_en, u.last_name_en) ILIKE '%' || $2::text || '%'\n       OR u.employee_code ILIKE '%' || $2::text || '%'\n       OR u.email ILIKE '%' || $2::text || '%');",
+    "params": [
+      "role_id",
+      "q"
+    ]
+  },
+  "platform.GetUserAdmin": {
+    "sql": "\nSELECT u.*, r.id AS role_id, r.key AS role_key, r.name AS role_name\nFROM platform.users u\nLEFT JOIN platform.user_roles ur ON ur.employee_code = u.employee_code\nJOIN platform.roles r ON r.id = ur.role_id OR (ur.role_id IS NULL AND r.key = 'employee')\nWHERE u.id = $1 AND NOT u.is_demo;",
+    "params": [
+      "id"
+    ]
+  },
+  "platform.SetUserRole": {
+    "sql": "\nINSERT INTO platform.user_roles (employee_code, role_id)\nVALUES ($1, $2)\nON CONFLICT (employee_code) DO UPDATE SET role_id = EXCLUDED.role_id, updated_at = now();",
+    "params": [
+      "employee_code",
+      "role_id"
+    ]
+  },
+  "platform.GetRoleForUpdate": {
+    "sql": "SELECT * FROM platform.roles WHERE id = $1 FOR SHARE;",
+    "params": [
+      "id"
+    ]
+  }
+}

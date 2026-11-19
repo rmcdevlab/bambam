@@ -1,0 +1,94 @@
+# S22 — หมวดงานและอาการ
+
+Status: APPROVED (2026-10-16) — user approved screens + plan; visual style follows the new design direction (repair CR-008, pending) · CR-001 applied 2026-10-26 (block below) · CR-005 building types (approved 2026-10-27)
+
+- **Flows:** F27 (see ../../02-flows.md)
+- **Persona:** Superadmin on desktop (see ../../01-users.md)
+- **Purpose of this screen (one sentence):** keep the category and symptom choices of the repair form clean and in the right order.
+- **Route:** `/settings/categories` (desktop: first category selected) · `/settings/categories/[categoryId]` (mobile: the symptom list page)
+- **Mockup:** none — same two-pane pattern as `../mockups/S20-buildings.html` (left = categories, right = symptoms)
+- **Data:** `listCategories`, `createCategory`, `updateCategory`, `reorderCategories`, `setCategoryActive`, `deleteCategory`, `listSymptoms`, `createSymptom`, `updateSymptom`, `reorderSymptoms`, `setSymptomActive`, `deleteSymptom`
+
+> **CR-008 (repair, approved 2026-10-16):** the category dialog adds `ความเร่งด่วนตั้งต้น *` (ฉุกเฉิน · สูง · ปกติ · ต่ำ, default ปกติ, hint `ใช้เมื่อผู้แจ้งเลือกแค่ อาการอื่นๆ`); the symptom dialog adds `ความเร่งด่วน *` (same options, hint `งานจะได้ระดับสูงสุดของอาการที่เลือก`); symptom rows show the priority badge; categories may show an examples line (`ตัวอย่างที่แสดงในฟอร์ม`, ≤ 60). Contract: category / symptom create + update get `defaultPriority` / `priority`. Built in settings Stage 5.
+
+
+> **CR-001 (2026-10-26, design `../mockups/CR-001-admin-settings.html#categories`, screenshots `categories-*.png`) — overrides Layout / Components below where they differ:**
+> - Access: Admin and Superadmin (`settings.categories.manage`).
+> - Heading: H1 "หมวดงานและอาการ", subtitle "จัดระเบียบหมวดงาน อาการ และความเร่งด่วนของงานแจ้งซ่อม", mascot, primary "เพิ่มหมวดงาน" on the heading row.
+> - Desktop: navigator panel "หมวดงาน {n}" (rows: icon tile · name · "{n} อาการ" (· ปิดใช้งาน) · `ChevronRight`; selected soft blue) with footer toggle "แสดงที่ปิดใช้งาน" + main panel: category header (icon tile, H2 name, status line "เปิดใช้งานในแบบฟอร์มแจ้งซ่อม" / "ปิดใช้งาน", row menu), meta line "ความเร่งด่วนตั้งต้น {badge} · ใช้เมื่อเลือก “อาการอื่น ๆ”", section "อาการ {n}" with small primary "เพิ่มอาการ", symptom rows = name · priority badge (`PriorityIndicator`) · row menu. Note under the panel: "เมื่อเลือกหลายอาการ งานจะใช้ระดับความเร่งด่วนสูงสุดของอาการที่เลือก / การตั้งค่านี้ใช้กับงานที่แจ้งใหม่ งานเดิมคงระดับที่ได้รับไว้". Mobile: panels stack; dialogs as bottom sheets.
+> - Category menu: แก้ไขหมวดงาน · เลื่อนขึ้น · เลื่อนลง · ปิดใช้งาน / เปิดใช้งาน · ลบ (approved rules kept: delete disabled when `inUse`; the `isOther` category cannot be deactivated / deleted). Symptom menu: แก้ไขอาการและความเร่งด่วน · เลื่อนขึ้น · เลื่อนลง · ปิดใช้งาน / เปิดใช้งาน · ลบ. Drag handles are not used (order via the menu, BR-ALL-5).
+> - Category dialog: ชื่อหมวดงาน * · ไอคอน * (12-icon picker, below) · ความเร่งด่วนตั้งต้น * (hint ใช้เมื่อผู้แจ้งเลือกแค่ “อาการอื่น ๆ”). Symptom dialog: subtitle = category name · ชื่ออาการ * · ความเร่งด่วน * (default = category default; hint งานจะได้ระดับสูงสุดของอาการที่เลือก · ใช้กับการแจ้งงานใหม่). Duplicate symptom message: ชื่อนี้มีอยู่แล้วในหมวดนี้.
+> - Empty symptoms: ยังไม่มีอาการที่เปิดใช้งาน / หมวดนี้จะไม่แสดงในแบบฟอร์มแจ้งซ่อม จนกว่าจะมีอาการที่เปิดใช้งาน · button เพิ่มอาการ. Last-active-symptom deactivate extra line: นี่คืออาการสุดท้ายที่เปิดใช้งาน หมวดนี้จะไม่แสดงในฟอร์มแจ้งซ่อม.
+> - ~~Area types of a category (repair CR-014) are not in the design: keep them in the category dialog as an optional multi-select under ความเร่งด่วนตั้งต้น.~~ (CR-005)
+
+> **CR-006 (2026-10-29):** restyle to the CR-006 page frame and list panel (`generic-panel` pattern); sub-menu of การให้บริการ. Behaviour unchanged. (CR-006)
+
+> **CR-005 (approved 2026-10-27, repair CR-025):** the category dialog replaces the area-type multi-select with `ใช้กับประเภทอาคาร *` (check boxes of active building types, ≥ 1; new category: none ticked; error `เลือกประเภทอาคารอย่างน้อย 1 ประเภท`; hint `ฟอร์มแจ้งซ่อมแสดงหมวดนี้เฉพาะอาคารประเภทที่เลือก`). The `อื่น ๆ` category shows `ใช้ได้กับทุกประเภทอาคาร` instead (read-only). Category header meta line adds `ใช้กับ: {type tags}`. Data: #32–#34 `buildingTypeIds`, #53 for the options.
+
+## Layout — mobile first
+
+Mobile `/settings/categories`: white top bar "หมวดงานและอาการ" + `[+]` (เพิ่มหมวดงาน); `MasterList` "หมวดงาน ({n})", row = 40px icon circle (`bg-svc-repair/15`, icon `text-foreground`) · name · "{n} อาการ" · ⋯ · `›`.
+Mobile `/settings/categories/[id]`: white top bar = category name, ⋯ = category menu; `MasterList` "อาการ ({n})" + "เพิ่มอาการ".
+
+```
+Desktop
+┌ หมวดงานและอาการ                                     [เพิ่มหมวดงาน] ┐
+│ ตัวเลือกหมวดงานและอาการในฟอร์มแจ้งซ่อม เรียงตามลำดับที่ผู้แจ้งเห็น      │
+│ ┌ หมวดงาน (5) ───────────┐ ┌ (❄) ระบบปรับอากาศ ──────── [เพิ่มอาการ] ┐ │
+│ │ ⠿ (❄) ระบบปรับอากาศ 5 › │ │ อาการ (5)                              │ │
+│ │ ⠿ (💡) ไฟฟ้าและแสงสว่าง 4│ │ ⠿ แอร์ไม่เย็น                       ⋯ │ │
+│ │ ⠿ (💧) ประปาและสุขภัณฑ์ 4│ │ ⠿ มีน้ำหยด                          ⋯ │ │
+│ │ …                      │ │ …                                      │ │
+│ └────────────────────────┘ └────────────────────────────────────────┘ │
+```
+
+Desktop (≥1024px): two panes 5 / 7 like S20. Right card header = icon circle + category name + "ปิดใช้งาน" badge; actions "เพิ่มอาการ" (primary sm), "แก้ไขหมวด" (outline sm).
+
+## Components
+
+| Area | Component | Notes |
+|---|---|---|
+| Lists | `MasterList` (`_common.md` §4) | |
+| Category dialog | `Dialog` / `Sheet` | ชื่อหมวดงาน* (≤ 100) · ไอคอน* (`ChoiceField` grid of 12 icon buttons, 56px, selected = `bg-foreground text-white`) |
+| Symptom dialog | `Dialog` / `Sheet` | ชื่ออาการ* (≤ 100) |
+| Warning | inline `Alert` warning in the right pane | when the category has no active symptom |
+
+Icon choices (lucide name → shown as icon only, accessible name in Thai): `wrench` ทั่วไป · `snowflake` ปรับอากาศ · `lightbulb` แสงสว่าง · `zap` ไฟฟ้า · `plug` ปลั๊ก · `droplets` น้ำ · `shower-head` สุขภัณฑ์ · `armchair` เฟอร์นิเจอร์ · `door-open` ประตู / อาคาร · `sparkles` ความสะอาด · `trash-2` ขยะ · `hammer` ซ่อมบำรุง. The map lives in one shared file used by the repair form too (see `../../03-plan.md`).
+
+## Content and copy (exact Thai text)
+
+| Element | Text |
+|---|---|
+| Title / subtitle | หมวดงานและอาการ / ตัวเลือกหมวดงานและอาการในฟอร์มแจ้งซ่อม เรียงตามลำดับที่ผู้แจ้งเห็น |
+| Lists | หมวดงาน ({n}) · อาการ ({n}) |
+| Buttons | เพิ่มหมวดงาน · เพิ่มอาการ · แก้ไขหมวด |
+| Category dialog | เพิ่มหมวดงาน / แก้ไขหมวดงาน · ชื่อหมวดงาน * (placeholder: เช่น ระบบปรับอากาศ) · ไอคอน * |
+| Symptom dialog | เพิ่มอาการ / แก้ไขอาการ · ชื่ออาการ * (placeholder: เช่น แอร์ไม่เย็น) · hint: อาการแสดงเป็นชื่องานซ่อม เช่น "แอร์ไม่เย็น · มีน้ำหยด" |
+| No-active-symptom warning | หมวดนี้ไม่แสดงในฟอร์มแจ้งซ่อม เพราะยังไม่มีอาการที่เปิดใช้งาน |
+| Deactivate category — extra line | อาการทั้งหมดในหมวดนี้จะไม่แสดงในฟอร์มด้วย |
+| Deactivate / delete the last active symptom — extra line | นี่คืออาการสุดท้ายที่เปิดใช้งานของหมวด "{หมวด}" หมวดนี้จะไม่แสดงในฟอร์มแจ้งซ่อม |
+| Empty — no categories | ยังไม่มีหมวดงาน / ผู้แจ้งต้องเลือกหมวดงานทุกครั้งที่แจ้งซ่อม · button เพิ่มหมวดงาน |
+| Empty — no symptoms | ยังไม่มีอาการในหมวดนี้ / ฟอร์มแจ้งซ่อมบังคับเลือกอาการอย่างน้อย 1 ข้อ · button เพิ่มอาการ |
+| Category not found | ไม่พบหมวดงานนี้ · button กลับไปรายการหมวดงาน |
+
+## States
+
+| State | What shows |
+|---|---|
+| Loading | left 5 skeleton rows with icon circles; right header + 5 rows |
+| Empty | per copy above |
+| Error | whole page shared copy; symptoms pane: inline `Alert` "โหลดรายการอาการไม่สำเร็จ" + ลองอีกครั้ง |
+| Forbidden | `_common.md` §1 |
+
+## Interactions
+
+- No moving a symptom to another category (F27 Added by Claude) — the edit dialog has no category field.
+- Category rows show "{n} อาการ" counting active symptoms only; 0 → text `text-warning` "ไม่มีอาการ".
+
+## Acceptance checklist
+
+- [ ] Same pattern as S20 at 375px and 1280px
+- [ ] Icon picker shows the 12 icons with accessible names; the repair form renders the same icon
+- [ ] Warning and extra dialog lines appear exactly when the category has no active symptom
+- [ ] All states above with the exact copy
+- [ ] Works with mocks

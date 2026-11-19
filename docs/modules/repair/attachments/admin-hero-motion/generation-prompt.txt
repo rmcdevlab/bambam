@@ -1,0 +1,30 @@
+Use case: stylized-concept.
+Asset type: production animation sprite atlas for the existing BAMBAM admin dashboard hero.
+Input images: the two attached local sprite sheets are character-identity references only. Match BAM precisely: adorable white tiger cub, black stripes, amber eyes, pink nose, soft detailed white fur, royal blue polo with the small white BAM chest letters, dark navy trousers, white sneakers with blue accents. Use the blueprint-reference proportions and front camera. Do not reproduce any clipboard.
+Primary request: create ONE transparent PNG sprite atlas with EXACTLY 24 full-body animation frames in a strict 6 columns x 4 rows rectangular grid, ideally 3072 x 2048 pixels, 512 x 512 per cell. Read order left to right then top to bottom. No borders, no captions, no frame numbers. Every cell has one full-body BAM at identical scale, identical fixed camera, head height, foot baseline and central body alignment. Feet stay planted at local x=256,y=468, head near y=48; leave safe margins in every cell. Body should occupy about 75% of each cell's height. Transparent empty space everywhere outside BAM and the blueprint. NO shadows/background/checkerboard. Same lighting and fur detail in all frames.
+This is a consecutive animation sequence with small anatomical in-between motions, NOT 24 disconnected poses. Both hands and the same blueprint must persist consistently. Smile friendly and calm.
+Frame 1: relaxed frontal stance, rolled blueprint held at viewer-right hip with left paw, right arm resting.
+2: right elbow starts lifting, forearm halfway up.
+3: right paw reaches shoulder height, palm beginning to open.
+4: raised open right paw beside head, pink paw pads visible.
+5: same raised paw tilts gently inward a few degrees.
+6: same raised paw tilts gently outward a few degrees.
+7: paw returns through center, elbow begins lowering.
+8: arm halfway down toward the blueprint.
+9: right paw reaches across toward rolled blueprint at left hip.
+10: both paws bring rolled blueprint to waist center.
+11: head tilts slightly down to inspect the roll, both paws ready to open it.
+12: paper starts unrolling, 20% of final width.
+13: paper 40% open, paws slowly separate.
+14: paper 60% open, gaze down.
+15: paper 80% open, paws further apart.
+16: blueprint fully open at waist, rectangular pale-blue sheet with very faint simple blue floor-plan linework; reading it.
+17: eyes and head begin lifting toward viewer, sheet unchanged.
+18: looks up and smiles, begins raising sheet a little.
+19: sheet reaches mid chest, held clearly toward viewer.
+20: holds the same sheet forward, a subtle happy head nod.
+21: sheet lowers gently toward waist.
+22: begins rolling sheet inward, half rolled.
+23: rolled blueprint held in both paws at waist.
+24: returns to frame 1's exact relaxed stance with roll at viewer-right hip.
+Constraints: retain original character identity, consistent face/stripes/outfit, exactly two arms and two legs, no walking, no jumping, no camera motion, no clipped ears/tail/feet/paper, no lighting drift, no new accessories. Fine smooth frame-to-frame anatomical increments. Real alpha transparency, not a rendered transparency checkerboard. Exact evenly spaced 6x4 grid is essential for CSS background-position animation.

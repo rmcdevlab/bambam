@@ -1,0 +1,170 @@
+# S24 — Role และสิทธิ์
+
+Status: APPROVED (2026-10-16) — user approved screens + plan; visual style follows the new design direction (repair CR-008, pending) · CR-001 applied 2026-10-26 (block below)
+
+> **CR-008 (2026-11-16):** G3 locks only the ตั้งค่าระบบ columns the editor lacks; every other system's column is tickable on every row except the editor's own role and Superadmin. Amendment 1: the editor's own row is open in every table except ตั้งค่าระบบ, where it stays locked with `แก้สิทธิ์ตั้งค่าระบบของ role ตัวเองไม่ได้`. Copy: locked cell `ให้ได้เฉพาะสิทธิ์ตั้งค่าระบบที่คุณมี`, info strip `สิทธิ์ตั้งค่าระบบ: ให้ได้เฉพาะที่คุณมี และแก้ของ role ตัวเองไม่ได้`, Add Role hint `คัดลอกได้เฉพาะ Role ที่มีสิทธิ์ตั้งค่าระบบไม่เกินของคุณ`, disabled copy option `มีสิทธิ์ตั้งค่าระบบที่คุณไม่มี`. (CR-008)
+
+- **Flows:** F29 (see ../../02-flows.md)
+- **Persona:** Superadmin on desktop (see ../../01-users.md)
+- **Purpose of this screen (one sentence):** decide what each role can do, and add, rename or remove roles.
+- **Route:** `/settings/roles` (`?tab=permissions` default · `?tab=roles`)
+- **Mockup:** `../mockups/S24-roles-permissions.html` (desktop matrix with changed cells + save bar, save dialog, Role tab, add-role dialog, mobile per-role switches)
+- **Layout reference:** user sample `../../attachments/matrix-permission-reference.png` — one card per permission group, rows = roles, columns = actions, checkboxes
+- **Data:** `getPermissionMatrix` (groups, permissions, roles with user counts, cells, `version`), `savePermissionMatrix`, `listRoles`, `createRole`, `updateRole`, `deleteRole`
+
+## Permission groups (cards) and column labels
+
+Keys and defaults: `../../01-users.md` → Permission catalog. The API returns groups and labels; this table is the seed copy.
+
+| System | Card | Column label | Key | Tooltip (ⓘ next to the label) |
+|---|---|---|---|---|
+| ระบบแจ้งซ่อม | งานซ่อม | ดูทุกงาน | `repair.ticket.view_all` | เห็นงานซ่อมทุกงาน รวมชื่อและคะแนนช่างภายนอก |
+| | | ประเมินและบันทึกผล | `repair.ticket.work` | งานซ่อมทุกงานส่งถึง role นี้ ประเมินวันคาดว่าเสร็จ และบันทึกผลซ่อม |
+| | | ~~ปรับความเร่งด่วน~~ | ~~`repair.ticket.set_priority`~~ | removed (repair CR-015) |
+| | | ปิดงานใดก็ได้ | `repair.ticket.close_any` | ปิดงานได้ทันทีโดยไม่ต้องรอตรวจรับ |
+| | งานที่ทีมทำเอง | บันทึกงานทีมทำเอง | `repair.ticket.team_handle` | บันทึกงานที่ทีมแก้เองแล้วปิดทันที และส่งต่องานที่ตัวเองบันทึกให้ช่าง |
+| | | ส่งต่องานทีมทุกงาน | `repair.ticket.handover_any` | ส่งต่องานทีมทำเองของใครก็ได้ให้ช่าง |
+| | ช่างภายนอกและภาพรวม | จัดการช่างภายนอก | `repair.contractor.manage` | เพิ่มและแก้ไขข้อมูลช่างภายนอก |
+| | | ดูภาพรวมอาคาร | `repair.overview.view` | เปิดภาพรวมอาคารและงานที่ยังไม่ปิดในแต่ละชั้น |
+
+
+> **CR-001 (2026-10-26, design `../mockups/CR-001-admin-settings.html#roles`, screenshots `roles-*.png`) — overrides Layout / copy below where they differ:**
+> - Superadmin only (`settings.roles.manage`). Heading: H1 "Role และสิทธิ์", subtitle "กำหนดว่าแต่ละบทบาททำอะไรได้ใน BAMBAM", mascot, primary "เพิ่ม Role".
+> - Tabs: **ตารางสิทธิ์** · **รายการ Role {n}**. Info strip: "ทุก Role แจ้งซ่อมและติดตามงานตัวเองได้เสมอ / (repair CR-024: no notifications) Superadmin มีทุกสิทธิ์ · สิทธิ์ตั้งค่าระบบล็อกตามขอบเขตของผู้ดูแล".
+> - Matrix cards (icon + group name, right note "ติ๊กเพื่อให้สิทธิ์" or `Lock` "กำหนดโดยระบบ"): **งานแจ้งซ่อม** (ดูทุกงาน · ดำเนินการและบันทึกผลซ่อม · ปิดงานใดก็ได้) · **งานทีมและช่างภายนอก** (บันทึกงานทีมทำเอง · ส่งต่องานทีมทุกงาน · จัดการช่างภายนอก · ดูภาพรวมอาคาร) · **ตั้งค่าระบบ** — fixed, every cell disabled (อาคารและห้อง · อุปกรณ์และประเภทอุปกรณ์ · หมวดงานและอาการ · ประเภทผู้รับเหมา · ผู้ใช้ · Role และสิทธิ์ · ประวัติการเปลี่ยนแปลง). Column ⓘ tooltips = the permission descriptions from #6. The "ปรับความเร่งด่วน" column is gone (repair CR-015). Note under the matrix: "ความเร่งด่วนกำหนดจากอาการที่เลือกตอนแจ้งซ่อม ตั้งค่าได้ที่ “หมวดงานและอาการ”".
+> - Row header: role name + "{n} คน" (Superadmin with `Lock`). Changed cells soft-blue. Sticky save bar: "เปลี่ยนสิทธิ์ {n} รายการ" · ยกเลิกการเปลี่ยนแปลง · **บันทึกสิทธิ์**; save dialog "บันทึกการเปลี่ยนสิทธิ์?" per role "{role} · ผู้ใช้ {n} คน / เพิ่ม: … / ถอด: …", footer "มีผลในการใช้งานครั้งถัดไป โดยไม่ต้องออกจากระบบ", toast "บันทึกสิทธิ์แล้ว".
+> - Role list tab: table Role (+ `Lock` "Role ระบบ") · คำอธิบาย · ผู้ใช้ (link "{n} คน" → S25 filtered) · menu (แก้ไข Role · ลบ Role). Add-role dialog "เริ่มต้นสิทธิ์" select: สิทธิ์พื้นฐานเท่านั้น / คัดลอกจาก {role}, hint "คัดลอกเฉพาะสิทธิ์งานซ่อม สิทธิ์ตั้งค่าระบบสงวนตามบทบาทผู้ดูแล".
+> - Mobile: role `Select` "เลือก Role ที่ต้องการตั้งค่า" + switches per permission (fixed ones disabled with "· กำหนดโดยระบบ").
+> - Spelling in the CR-001 design is "Role" (capital R) in labels; keep it consistently.
+
+> **CR-006 (2026-10-29):** new rows (service access, `repair.building3d.view`, `settings.users.view`); the "ตั้งค่าระบบ" group is tickable (no longer locked) except for `super_admin`. Locked cells with a reason tooltip: the editor's own role ("แก้สิทธิ์ของ role ตัวเองไม่ได้"), keys the editor does not hold ("ให้ได้เฉพาะสิทธิ์ที่คุณมี"); the `super_admin` column is always locked; ดูโมเดล 3D อาคาร is disabled until ดูภาพรวมอาคาร is ticked. Restyle to the CR-006 frame. (CR-006)
+> **D-134 (2026-11-01, owner):** one card / table per system — ระบบแจ้งซ่อม has a two-level column header (การใช้บริการแจ้งซ่อม · งานแจ้งซ่อม · **งานทีม ช่างภายนอก และภาพรวมอาคาร**, renamed from "งานทีมและช่างภายนอก"); phones: one card per system with group sub-headings. (CR-006)
+
+## Layout — mobile first
+
+Mobile — tab "สิทธิ์":
+
+```
+┌──────────────────────────────┐
+│ ‹     Role และสิทธิ์      [+] │ ← + = เพิ่ม role
+│ [  สิทธิ์  |  Role 7  ]       │ ← segmented
+│ ⓘ ทุก role แจ้งซ่อม ติดตามงาน… │
+│ Role                          │
+│ [ ช่างเทคนิค · 1 คน        ⌄ ] │ ← Picker
+│ (🔧) ระบบแจ้งซ่อม              │
+│ ┌ งานซ่อม ──────────────────┐ │
+│ │ ดูทุกงาน              [●─] │ │ ← Switch, 64px rows
+│ │ เห็นงานซ่อมทุกงาน รวม…      │ │
+│ │ ประเมินและบันทึกผล     [●─] │ │
+│ │ ปรับความเร่งด่วน  •    [─○] │ │ ← • = changed, not saved
+│ │ ปิดงานใดก็ได้          [─○] │ │
+│ └──────────────────────────┘ │
+│ ┌ งานที่ทีมทำเอง ────────────┐ │
+│ …                             │
+│┌────────────────────────────┐│
+││ เปลี่ยน 1 รายการ  [บันทึก]   ││ ← sticky save bar, only when dirty
+│└────────────────────────────┘│
+└──────────────────────────────┘
+```
+
+Mobile — tab "Role": `Card` list, row = name + badge · description (1 line) · "{n} คน" · ⋯ (แก้ไข · ดูผู้ใช้ · ลบ).
+
+Desktop (≥1024px) — tab "สิทธิ์":
+
+```
+Role และสิทธิ์                                          [+ เพิ่ม role]
+กำหนดว่าแต่ละ role ทำอะไรได้ในแต่ละระบบ
+[ สิทธิ์ | Role 7 ]
+ⓘ ทุก role แจ้งซ่อม ติดตามงานของตัวเอง ~~และรับแจ้งเตือน~~ได้เสมอ (CR-024) · Superadmin มีทุกสิทธิ์ แก้ไม่ได้
+(🔧) ระบบแจ้งซ่อม
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ งานซ่อม                 ดูทุกงาน ⓘ  ประเมินและบันทึกผล ⓘ  ปรับความเร่งด่วน ⓘ  ปิดงานใดก็ได้ ⓘ │ ← header row bg-muted
+│ 🔒 Superadmin · 1 คน        ☑            ☑               ☑               ☑      │ ← disabled, bg-muted/40
+│ พนักงานทั่วไป · 412 คน      ☐            ☐               ☐               ☐      │
+│ หัวหน้าแม่บ้าน · 1 คน       ☐            ☐               ☐               ☐      │
+│ หัวหน้ารปภ. · 1 คน         ☐            ☐               ☐               ☐      │
+│ ช่างเทคนิค · 1 คน           ☑            ☑              [☑•]              ☐      │ ← changed cell: bg-secondary + dot
+│ Admin · 2 คน               ☑            ☐               ☑               ☑      │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌ งานที่ทีมทำเอง          บันทึกงานทีมทำเอง ⓘ   ส่งต่องานทีมทุกงาน ⓘ ┐ …
+┌ ช่างภายนอกและภาพรวม     จัดการช่างภายนอก ⓘ    ดูภาพรวมอาคาร ⓘ    ┐ …
+ระบบจองรถ · ระบบจองห้องประชุม — จะมีสิทธิ์ให้ตั้งเมื่อระบบเปิดใช้งาน   (muted line)
+                       ┌──────────────────────────────────────────────┐
+                       │ เปลี่ยน 1 รายการ   [ยกเลิกการเปลี่ยนแปลง] [บันทึก] │ ← sticky bottom of the main area, shadow-float
+                       └──────────────────────────────────────────────┘
+```
+
+- Each card = `Card` with a `Table`: first column (role) fixed 260px, the permission columns share the rest equally, checkbox centered. Header row `bg-muted`, 52px; body rows 56px (sample density; still ≥ 44px targets — the whole cell is the click target).
+- Row order: Superadmin first (locked), then the six seeded roles in glossary order, then custom roles by creation time.
+- A newly created role (from the add dialog) is scrolled into view and its row flashes `bg-secondary` for 1.5s.
+
+Desktop — tab "Role": `Card` + `Table`: Role (name + "role ระบบ" badge) · คำอธิบาย · ผู้ใช้ ("{n} คน", link → S25 `?role=`) · menu (แก้ไข · ลบ). Same row order.
+
+## Components
+
+| Area | Component | Notes |
+|---|---|---|
+| Tabs | segmented control (`SegmentedControl`) | "Role {n}" shows the count |
+| Info line | `Alert` (default, `Info` icon), compact | |
+| System heading | `ServiceIcon` 32px (repair) + H2 | |
+| Matrix | `Card` + `Table` + `Checkbox` (add via shadcn) | checked = `bg-primary`; disabled checked = `bg-primary/40` + `Lock` on the row header |
+| Column tooltip | `Tooltip` on an `Info` 16px button (aria-label "คำอธิบาย {label}") | |
+| Mobile switches | `Switch` (add via shadcn) in list rows | label + description (Small muted) |
+| Role picker (mobile) | `Picker` (`components/shared`) | options "{role} · {n} คน" |
+| Save bar | sticky `Card` `shadow-float` | appears only when dirty |
+| Save dialog | `AlertDialog` | summary list |
+| Role dialogs | `Dialog` / `Sheet` | add / edit |
+| Delete role | `AlertDialog` | two variants (has users / no users) |
+
+## Content and copy (exact Thai text)
+
+| Element | Text |
+|---|---|
+| Title / subtitle | Role และสิทธิ์ / กำหนดว่าแต่ละ role ทำอะไรได้ในแต่ละระบบ |
+| Tabs | สิทธิ์ · Role {n} |
+| Info line | ทุก role แจ้งซ่อม ~~ติดตามงานของตัวเอง และรับแจ้งเตือน~~ และติดตามงานของตัวเองได้เสมอ (repair CR-024) · Superadmin มีทุกสิทธิ์ แก้ไม่ได้ |
+| Row header | {role} · {n} คน |
+| Locked row tooltip | Superadmin มีทุกสิทธิ์เสมอ |
+| Future systems line | ระบบจองรถ · ระบบจองห้องประชุม — จะมีสิทธิ์ให้ตั้งเมื่อระบบเปิดใช้งาน |
+| Save bar | เปลี่ยน {n} รายการ · ยกเลิกการเปลี่ยนแปลง · **บันทึก** |
+| Save dialog | title: บันทึกการเปลี่ยนสิทธิ์? · per role: **{role}** ({n} คน) — เพิ่ม: {labels} · ถอด: {labels} · footer: มีผลกับผู้ใช้ทันทีในการใช้งานครั้งถัดไป ไม่ต้องออกจากระบบ · buttons ยกเลิก · **บันทึก** |
+| Saved toast | บันทึกสิทธิ์แล้ว |
+| Conflict (`VERSION_CONFLICT`) | inline `Alert` warning in the dialog: สิทธิ์ถูกแก้โดย {ชื่อ} เมื่อ {เวลา} · button "โหลดข้อมูลล่าสุด" → reloads, re-applies your changes on top, closes the dialog, toast "โหลดข้อมูลล่าสุดแล้ว ตรวจการเปลี่ยนแปลงอีกครั้งก่อนบันทึก" |
+| Leave unsaved | `_common.md` §5 |
+| Add role button | เพิ่ม role |
+| Role dialog | title: เพิ่ม role / แก้ไข role · ชื่อ role * (≤ 50, placeholder: เช่น หัวหน้าช่าง) · คำอธิบาย (≤ 200, placeholder: role นี้ใช้กับใคร) · (add only) เริ่มต้นสิทธิ์: segmented "สิทธิ์พื้นฐานเท่านั้น" · "คัดลอกจาก role อื่น" → `Picker` "คัดลอกสิทธิ์จาก" * · buttons ยกเลิก · **เพิ่ม role** / **บันทึก** |
+| Role toasts | เพิ่ม role "{ชื่อ}" แล้ว · บันทึกแล้ว · ลบ role "{ชื่อ}" แล้ว |
+| Delete — has users (`ROLE_IN_USE`) | title: ลบ role นี้ไม่ได้ · body: มีผู้ใช้ {n} คนใน role "{ชื่อ}" ย้ายไป role อื่นก่อน · buttons ปิด · **ดูผู้ใช้** (→ S25 `?role=`) |
+| Delete — no users | title: ลบ role "{ชื่อ}"? · body: ลบถาวร กู้คืนไม่ได้ · ยกเลิก · **ลบ role** (destructive) |
+| System role menu | no "ลบ"; `super_admin`: no "แก้ไข" either (menu hidden); `employee`: "แก้ไข" only |
+| Validation | กรุณากรอกชื่อ role · ชื่อนี้มีอยู่แล้ว · ชื่อยาวได้ไม่เกิน 50 ตัวอักษร · คำอธิบายยาวได้ไม่เกิน 200 ตัวอักษร · กรุณาเลือก role ที่จะคัดลอก |
+
+## States
+
+| State | What shows |
+|---|---|
+| Loading | tabs + info line; 3 cards with header row and 7 skeleton rows |
+| Empty | n/a (system roles always exist) |
+| Error | whole page shared copy; save failure: dialog stays open, toast error, changes kept |
+| Forbidden | `_common.md` §1 |
+| Saving | dialog primary button spinner + disabled |
+
+## Interactions
+
+- Click anywhere in a cell toggles it; Space toggles the focused checkbox; arrow keys move between cells inside a card (roving tabindex) — optional, Tab must work.
+- Toggling back to the original value removes the "changed" mark and lowers the count.
+- Switching tab with unsaved changes keeps them (same page); leaving the route asks (`_common.md` §5, also `beforeunload`).
+- Mobile: changing the role in the Picker keeps pending changes of other roles; the save bar counts all of them.
+- After save the matrix reloads from the response (new `version`).
+
+## Acceptance checklist
+
+- [ ] Matches the mockup at 375px and 1280px; desktop follows the user sample (cards per group, rows = roles, columns = actions)
+- [ ] Superadmin row is checked and disabled; system roles cannot be deleted; `super_admin` cannot be edited
+- [ ] Changed cells are marked, counted, revertible; save dialog lists exactly the changes per role with user counts
+- [ ] Conflict path works (409 → reload and re-apply)
+- [ ] Add role with "copy from" pre-fills that role's permissions; new row is highlighted
+- [ ] Delete role with users shows the blocked dialog + link to S25 filtered by the role
+- [ ] All states above with the exact copy; leaving with unsaved changes asks
+- [ ] Keyboard: every checkbox / switch reachable, accessible name "{permission} — {role}"
+- [ ] Works with mocks

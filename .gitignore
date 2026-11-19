@@ -1,0 +1,54 @@
+# secrets
+*.pem
+
+# frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/playwright-report/
+frontend/test-results/
+frontend/coverage/
+
+# obsidian (keep app.json so link settings are shared)
+docs/.obsidian/workspace*.json
+docs/.obsidian/cache
+docs/.obsidian/plugins/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.claude/settings.local.json
+
+# SSO handoff from RMC SSO Admin (contains Client Secret) — never commit
+bam-sso-handoff.md
+
+# playwright demo-user sessions
+frontend/e2e/.auth/
+
+# system atlas (exported file is rebuilt locally)
+docs/atlas/dist/
+
+# extra Next.js build / preview folders (NEXT_DIST_DIR), e.g. .next-e2e, .next-admin-polish
+frontend/.next-*/
+
+# Next.js persistent uploads and isolated test uploads (CR-056)
+frontend/data/
+
+# Generated QA/prototype artifacts; keep test recordings opt-in.
+output/
+frontend/blob-report/
+debug.log
+frontend/debug.log
+
+# Private environment files; only public defaults/templates belong in Git.
+.env
+.env.*
+!.env.example
+!.env.*.example
+!frontend/.env.development
+!frontend/.env.production
+
+# Generated dependencies, caches and logs at any depth.
+node_modules/
+*.tsbuildinfo
+*.log

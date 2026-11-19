@@ -1,0 +1,371 @@
+-- Step (CR-005) = the progress shown to people, derived from the row:
+--   closed → closed · resolved → awaiting_rating · in_progress without expected_done_on → awaiting_assessment
+--   · in_progress after a send back → reworking · else in_repair.
+-- The same CASE is repeated in the list / count queries; keep them identical.
+
+-- name: InsertTicket :exec
+-- A team-handled record (F04) is created `closed` / `team_handled`; every other ticket `in_progress`.
+INSERT INTO repair.tickets (
+    id, ticket_no, status, closed_reason, closed_at, priority, priority_source, category_id, category_other, symptom_other,
+    building_id, floor_id, room_id, location_detail, details, asset_code, asset_id, reporter_id, created_at, updated_at
+) VALUES (
+    @id, @ticket_no, @status, sqlc.narg('closed_reason')::text, sqlc.narg('closed_at')::timestamptz,
+    @priority, @priority_source, sqlc.narg('category_id')::uuid,
+    sqlc.narg('category_other')::text, sqlc.narg('symptom_other')::text,
+    @building_id, @floor_id, @room_id, @location_detail, @details, @asset_code, sqlc.narg('asset_id')::uuid,
+    @reporter_id, @created_at, @created_at
+);
+
+-- name: InsertTicketSymptoms :exec
+INSERT INTO repair.ticket_symptoms (ticket_id, symptom_id, sort_order)
+SELECT @ticket_id, s.symptom_id, s.ord::integer - 1
+FROM unnest(@symptom_ids::uuid[]) WITH ORDINALITY AS s (symptom_id, ord);
+
+-- name: InsertTicketEvent :exec
+INSERT INTO repair.ticket_events (id, ticket_id, type, actor_id, note, data, created_at)
+VALUES (@id, @ticket_id, @type, @actor_id, @note, @data, @created_at);
+
+-- name: GetTicket :one
+SELECT
+    t.id, t.ticket_no, t.status, t.closed_reason, t.priority, t.priority_source,
+    t.category_id, c.name AS category_name, c.icon AS category_icon, t.category_other, t.symptom_other,
+    t.building_id, b.name AS building_name,
+    t.floor_id, f.name AS floor_name,
+    t.room_id, rm.name AS room_name,
+    t.location_detail, t.details, t.asset_code, ast.code AS linked_asset_code, ast.name AS linked_asset_name,
+    t.reporter_id, rp.name AS reporter_name, rp.department AS reporter_department,
+    t.holder_id, hp.name AS holder_name, hp.department AS holder_department,
+    t.result_note,
+    t.resolved_by_id, rb.name AS resolved_by_name, rb.department AS resolved_by_department,
+    t.rating, t.rating_comment, t.send_back_count,
+    t.expected_done_on, t.assessed_at, t.work_by,
+    t.contractor_id, ct.name AS contractor_name, t.contractor_rating, t.contractor_rating_comment,
+    t.assignee_id, asg.name AS assignee_name, asg.role_name AS assignee_role_name,
+    t.auto_close_at, t.resolved_at, t.closed_at, t.created_at, t.updated_at,
+    EXISTS (SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = @viewer_id) AS viewer_subscribed,
+    (SELECT count(*) FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id) AS subscriber_count
+FROM repair.tickets t
+LEFT JOIN repair.categories c ON c.id = t.category_id
+JOIN platform.buildings b ON b.id = t.building_id
+JOIN platform.floors f ON f.id = t.floor_id
+LEFT JOIN platform.rooms rm ON rm.id = t.room_id
+JOIN repair.people rp ON rp.id = t.reporter_id
+LEFT JOIN repair.people hp ON hp.id = t.holder_id
+LEFT JOIN repair.people rb ON rb.id = t.resolved_by_id
+LEFT JOIN repair.contractors ct ON ct.id = t.contractor_id
+LEFT JOIN repair.staff asg ON asg.id = t.assignee_id
+LEFT JOIN platform.assets ast ON ast.id = t.asset_id
+WHERE t.id = @id;
+
+-- name: ListTickets :many
+-- Filters are shared with CountTickets and CountTicketsByStatus; keep the WHERE clauses identical.
+SELECT
+    t.id, t.ticket_no, t.status, t.closed_reason, t.priority, t.priority_source,
+    t.category_id, c.name AS category_name, c.icon AS category_icon, t.category_other, t.symptom_other,
+    t.building_id, b.name AS building_name,
+    t.floor_id, f.name AS floor_name,
+    t.room_id, rm.name AS room_name,
+    t.location_detail,
+    t.reporter_id, rp.name AS reporter_name, rp.department AS reporter_department,
+    t.holder_id, hp.name AS holder_name, hp.department AS holder_department,
+    t.rating, t.send_back_count,
+    t.expected_done_on, t.assessed_at, t.work_by,
+    t.contractor_id, ct.name AS contractor_name,
+    t.assignee_id, asg.name AS assignee_name, asg.role_name AS assignee_role_name,
+    t.auto_close_at, t.resolved_at, t.closed_at, t.created_at, t.updated_at,
+    EXISTS (SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = @viewer_id) AS viewer_subscribed
+FROM repair.tickets t
+LEFT JOIN repair.categories c ON c.id = t.category_id
+JOIN platform.buildings b ON b.id = t.building_id
+JOIN platform.floors f ON f.id = t.floor_id
+LEFT JOIN platform.rooms rm ON rm.id = t.room_id
+JOIN repair.people rp ON rp.id = t.reporter_id
+LEFT JOIN repair.people hp ON hp.id = t.holder_id
+LEFT JOIN repair.contractors ct ON ct.id = t.contractor_id
+LEFT JOIN repair.staff asg ON asg.id = t.assignee_id
+WHERE (@scope_all::boolean OR (
+        (@relation::text IN ('all', 'reported') AND t.reporter_id = @viewer_id)
+     OR (@relation::text IN ('all', 'following') AND EXISTS (
+            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = @viewer_id))))
+  AND (cardinality(@statuses::text[]) = 0 OR t.status = ANY(@statuses::text[]))
+  AND (cardinality(@steps::text[]) = 0 OR (CASE
+        WHEN t.status = 'closed' THEN 'closed'
+        WHEN t.status = 'resolved' THEN 'awaiting_rating'
+        WHEN t.expected_done_on IS NULL THEN 'awaiting_assessment'
+        WHEN t.send_back_count > 0 THEN 'reworking'
+        ELSE 'in_repair' END) = ANY(@steps::text[]))
+  AND (sqlc.narg('closed_reason')::text IS NULL OR t.closed_reason = sqlc.narg('closed_reason')::text)
+  AND (sqlc.narg('q')::text IS NULL OR t.ticket_no ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR t.location_detail ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR rm.name ILIKE '%' || sqlc.narg('q')::text || '%')
+  AND (sqlc.narg('created_from')::timestamptz IS NULL OR t.created_at >= sqlc.narg('created_from')::timestamptz)
+  AND (sqlc.narg('created_to')::timestamptz IS NULL OR t.created_at <= sqlc.narg('created_to')::timestamptz)
+  AND (sqlc.narg('category_id')::uuid IS NULL OR t.category_id = sqlc.narg('category_id')::uuid)
+  -- CR-048: one or more buildings (empty = every building)
+  AND (cardinality(@building_ids::uuid[]) = 0 OR t.building_id = ANY(@building_ids::uuid[]))
+  AND (sqlc.narg('floor_id')::uuid IS NULL OR t.floor_id = sqlc.narg('floor_id')::uuid)
+  AND (sqlc.narg('priority')::text IS NULL OR t.priority = sqlc.narg('priority')::text)
+ORDER BY
+    -- BR-F06-2: resolved tickets awaiting the viewer's rating first
+    (@awaiting_first::boolean AND t.status = 'resolved' AND t.reporter_id = @viewer_id) DESC,
+    CASE WHEN @sort::text = 'closedAt:desc' THEN t.closed_at END DESC NULLS LAST,
+    CASE WHEN @sort::text = 'createdAt:desc' THEN t.created_at END DESC,
+    CASE WHEN @sort::text = 'createdAt:asc' THEN t.created_at END ASC,
+    t.updated_at DESC, t.id
+LIMIT @page_limit OFFSET @page_offset;
+
+-- name: ListMyTickets :many
+-- #35 (S06, CR-019): one page of the viewer's own tickets with only the table's columns — no people, contractor,
+-- photo or symptom-row lookups; the title is joined here. Same WHERE as CountTickets with scope_all = false.
+-- CR-052: the row carries the priority (S06 shows it to the reporter / follower).
+SELECT
+    t.id, t.ticket_no, t.status, t.closed_reason, t.priority,
+    t.category_id, c.name AS category_name, c.icon AS category_icon, t.category_other,
+    concat_ws(' · ',
+        (SELECT string_agg(sy.name, ' · ' ORDER BY ts.sort_order)
+         FROM repair.ticket_symptoms ts JOIN repair.symptoms sy ON sy.id = ts.symptom_id
+         WHERE ts.ticket_id = t.id),
+        t.symptom_other)::text AS title,
+    t.building_id, b.name AS building_name,
+    t.floor_id, f.name AS floor_name,
+    t.room_id, rm.name AS room_name,
+    t.location_detail,
+    (t.reporter_id = @viewer_id)::boolean AS is_reporter,
+    t.rating, t.send_back_count, t.expected_done_on,
+    t.assignee_id, asg.name AS assignee_name, asg.role_name AS assignee_role_name,
+    t.auto_close_at, t.resolved_at, t.updated_at
+FROM repair.tickets t
+LEFT JOIN repair.categories c ON c.id = t.category_id
+JOIN platform.buildings b ON b.id = t.building_id
+JOIN platform.floors f ON f.id = t.floor_id
+LEFT JOIN platform.rooms rm ON rm.id = t.room_id
+LEFT JOIN repair.staff asg ON asg.id = t.assignee_id
+WHERE ((@relation::text IN ('all', 'reported') AND t.reporter_id = @viewer_id)
+     OR (@relation::text IN ('all', 'following') AND EXISTS (
+            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = @viewer_id)))
+  AND (cardinality(@statuses::text[]) = 0 OR t.status = ANY(@statuses::text[]))
+  AND (cardinality(@steps::text[]) = 0 OR (CASE
+        WHEN t.status = 'closed' THEN 'closed'
+        WHEN t.status = 'resolved' THEN 'awaiting_rating'
+        WHEN t.expected_done_on IS NULL THEN 'awaiting_assessment'
+        WHEN t.send_back_count > 0 THEN 'reworking'
+        ELSE 'in_repair' END) = ANY(@steps::text[]))
+  AND (sqlc.narg('closed_reason')::text IS NULL OR t.closed_reason = sqlc.narg('closed_reason')::text)
+  AND (sqlc.narg('q')::text IS NULL OR t.ticket_no ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR t.location_detail ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR rm.name ILIKE '%' || sqlc.narg('q')::text || '%')
+ORDER BY
+    -- BR-F06-2: resolved tickets awaiting the viewer's rating first
+    (t.status = 'resolved' AND t.reporter_id = @viewer_id) DESC,
+    CASE WHEN @sort::text = 'closedAt:desc' THEN t.closed_at END DESC NULLS LAST,
+    CASE WHEN @sort::text = 'createdAt:desc' THEN t.created_at END DESC,
+    CASE WHEN @sort::text = 'createdAt:asc' THEN t.created_at END ASC,
+    t.updated_at DESC, t.id
+LIMIT @page_limit OFFSET @page_offset;
+
+-- name: CountTickets :one
+SELECT count(*) FROM repair.tickets t
+LEFT JOIN platform.rooms rm ON rm.id = t.room_id
+WHERE (@scope_all::boolean OR (
+        (@relation::text IN ('all', 'reported') AND t.reporter_id = @viewer_id)
+     OR (@relation::text IN ('all', 'following') AND EXISTS (
+            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = @viewer_id))))
+  AND (cardinality(@statuses::text[]) = 0 OR t.status = ANY(@statuses::text[]))
+  AND (cardinality(@steps::text[]) = 0 OR (CASE
+        WHEN t.status = 'closed' THEN 'closed'
+        WHEN t.status = 'resolved' THEN 'awaiting_rating'
+        WHEN t.expected_done_on IS NULL THEN 'awaiting_assessment'
+        WHEN t.send_back_count > 0 THEN 'reworking'
+        ELSE 'in_repair' END) = ANY(@steps::text[]))
+  AND (sqlc.narg('closed_reason')::text IS NULL OR t.closed_reason = sqlc.narg('closed_reason')::text)
+  AND (sqlc.narg('q')::text IS NULL OR t.ticket_no ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR t.location_detail ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR rm.name ILIKE '%' || sqlc.narg('q')::text || '%')
+  AND (sqlc.narg('created_from')::timestamptz IS NULL OR t.created_at >= sqlc.narg('created_from')::timestamptz)
+  AND (sqlc.narg('created_to')::timestamptz IS NULL OR t.created_at <= sqlc.narg('created_to')::timestamptz)
+  AND (sqlc.narg('category_id')::uuid IS NULL OR t.category_id = sqlc.narg('category_id')::uuid)
+  -- CR-048: one or more buildings (empty = every building)
+  AND (cardinality(@building_ids::uuid[]) = 0 OR t.building_id = ANY(@building_ids::uuid[]))
+  AND (sqlc.narg('floor_id')::uuid IS NULL OR t.floor_id = sqlc.narg('floor_id')::uuid)
+  AND (sqlc.narg('priority')::text IS NULL OR t.priority = sqlc.narg('priority')::text);
+
+-- name: CountTicketsByStatus :one
+SELECT
+    count(*) FILTER (WHERE t.status = 'in_progress') AS in_progress_count,
+    count(*) FILTER (WHERE t.status = 'resolved') AS resolved_count,
+    count(*) FILTER (WHERE t.status = 'closed') AS closed_count,
+    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NULL) AS awaiting_assessment_count,
+    count(*) FILTER (WHERE t.status = 'in_progress' AND t.expected_done_on IS NOT NULL) AS in_repair_count,
+    count(*) FILTER (WHERE t.status = 'resolved' AND t.reporter_id = @viewer_id) AS awaiting_my_confirmation_count
+FROM repair.tickets t
+LEFT JOIN platform.rooms rm ON rm.id = t.room_id
+WHERE (@scope_all::boolean OR (
+        (@relation::text IN ('all', 'reported') AND t.reporter_id = @viewer_id)
+     OR (@relation::text IN ('all', 'following') AND EXISTS (
+            SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = @viewer_id))))
+  AND (sqlc.narg('closed_reason')::text IS NULL OR t.closed_reason = sqlc.narg('closed_reason')::text)
+  AND (sqlc.narg('q')::text IS NULL OR t.ticket_no ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR t.location_detail ILIKE '%' || sqlc.narg('q')::text || '%'
+       OR rm.name ILIKE '%' || sqlc.narg('q')::text || '%')
+  AND (sqlc.narg('created_from')::timestamptz IS NULL OR t.created_at >= sqlc.narg('created_from')::timestamptz)
+  AND (sqlc.narg('created_to')::timestamptz IS NULL OR t.created_at <= sqlc.narg('created_to')::timestamptz)
+  AND (sqlc.narg('category_id')::uuid IS NULL OR t.category_id = sqlc.narg('category_id')::uuid)
+  -- CR-048: one or more buildings (empty = every building)
+  AND (cardinality(@building_ids::uuid[]) = 0 OR t.building_id = ANY(@building_ids::uuid[]))
+  AND (sqlc.narg('floor_id')::uuid IS NULL OR t.floor_id = sqlc.narg('floor_id')::uuid)
+  AND (sqlc.narg('priority')::text IS NULL OR t.priority = sqlc.narg('priority')::text);
+
+-- name: ListSymptomsForTickets :many
+SELECT ts.ticket_id, s.id, s.name FROM repair.ticket_symptoms ts
+JOIN repair.symptoms s ON s.id = ts.symptom_id
+WHERE ts.ticket_id = ANY(@ticket_ids::uuid[])
+ORDER BY ts.ticket_id, ts.sort_order;
+
+-- name: FirstReportPhotos :many
+SELECT DISTINCT ON (ticket_id) ticket_id, photo_id FROM repair.ticket_photos
+WHERE ticket_id = ANY(@ticket_ids::uuid[]) AND kind = 'report'
+ORDER BY ticket_id, sort_order;
+
+-- name: ListTicketEvents :many
+SELECT e.id, e.type, e.actor_id, ap.name AS actor_name, ap.department AS actor_department,
+       e.note, e.data, e.created_at
+FROM repair.ticket_events e
+LEFT JOIN repair.people ap ON ap.id = e.actor_id
+WHERE e.ticket_id = @ticket_id
+ORDER BY e.created_at DESC, e.id DESC;
+
+-- name: GetTicketAccess :one
+-- The fields the visibility rule needs (BR-F06-1), without loading the whole detail.
+SELECT t.reporter_id, t.holder_id,
+       EXISTS (SELECT 1 FROM repair.ticket_subscribers s WHERE s.ticket_id = t.id AND s.user_id = @viewer_id) AS viewer_subscribed
+FROM repair.tickets t
+WHERE t.id = @id;
+
+-- name: LockTicket :one
+-- Every status change locks the row first, so concurrent actions see each other's result.
+SELECT id, status, closed_reason, reporter_id, expected_done_on, work_by, contractor_id, contractor_rating, send_back_count FROM repair.tickets
+WHERE id = @id
+FOR UPDATE;
+
+-- name: AssessTicket :exec
+-- CR-006: the assessment = expected finish date + who does the work. CR-034: + the responsible in-house technician. Changing the contractor drops
+-- the old contractor's rating (it belonged to the previous one).
+UPDATE repair.tickets
+SET expected_done_on = @expected_done_on, holder_id = @technician_id,
+    work_by = @work_by,
+    contractor_rating = CASE WHEN contractor_id IS NOT DISTINCT FROM sqlc.narg('contractor_id')::uuid THEN contractor_rating END,
+    contractor_rating_comment = CASE WHEN contractor_id IS NOT DISTINCT FROM sqlc.narg('contractor_id')::uuid THEN contractor_rating_comment END,
+    contractor_id = sqlc.narg('contractor_id')::uuid,
+    assignee_id = sqlc.narg('assignee_id')::uuid,
+    assessed_at = COALESCE(assessed_at, @now), updated_at = @now
+WHERE id = @id;
+
+-- name: ResolveTicket :exec
+UPDATE repair.tickets
+SET status = 'resolved', result_note = @note, resolved_by_id = @technician_id, holder_id = @technician_id,
+    contractor_rating = COALESCE(sqlc.narg('contractor_rating')::smallint, contractor_rating),
+    contractor_rating_comment = CASE WHEN sqlc.narg('contractor_rating')::smallint IS NULL THEN contractor_rating_comment
+                                     ELSE sqlc.narg('contractor_rating_comment')::text END,
+    resolved_at = @now, auto_close_at = @auto_close_at, updated_at = @now
+WHERE id = @id;
+
+-- name: ConfirmTicket :exec
+UPDATE repair.tickets
+SET status = 'closed', closed_reason = 'confirmed', rating = @rating, rating_comment = sqlc.narg('rating_comment')::text,
+    closed_at = @now, auto_close_at = NULL, updated_at = @now
+WHERE id = @id;
+
+-- name: AdminCloseTicket :exec
+-- F08-B: admin closes an open ticket from any status (BR-F08B-1).
+UPDATE repair.tickets
+SET status = 'closed', closed_reason = 'admin_closed', closed_at = @now, auto_close_at = NULL, updated_at = @now
+WHERE id = @id;
+
+-- name: SendBackTicket :exec
+UPDATE repair.tickets
+SET status = 'in_progress', send_back_count = send_back_count + 1, auto_close_at = NULL, updated_at = @now
+WHERE id = @id;
+
+-- name: HandOverTicket :exec
+-- F05 (BR-F05-1/3): the same team-handled ticket goes back to the technician, waiting for the assessment.
+UPDATE repair.tickets
+SET status = 'in_progress', closed_reason = NULL, closed_at = NULL, updated_at = @now
+WHERE id = @id;
+
+-- name: AutoCloseDueTickets :many
+-- BR-F07-4: resolved tickets nobody rated within 3 days. Idempotent: closed rows no longer match.
+UPDATE repair.tickets
+SET status = 'closed', closed_reason = 'auto_closed', closed_at = @now, auto_close_at = NULL, updated_at = @now
+WHERE status = 'resolved' AND auto_close_at <= @now
+RETURNING id;
+
+-- name: InsertAutoClosedEvents :exec
+INSERT INTO repair.ticket_events (ticket_id, type, created_at)
+SELECT unnest(@ticket_ids::uuid[]), 'auto_closed', @now;
+
+-- name: ListRecentPlaces :many
+-- "ที่เคยแจ้ง" (#28, CR-008, CR-014): the reporter's last 3 distinct rooms on active buildings / floors / rooms;
+-- each keeps the extra spot of its newest ticket. Tickets without a room (before CR-014) are skipped.
+SELECT p.building_id, p.building_name, p.floor_id, p.floor_name, p.room_id, p.room_name,
+       p.location_detail, p.last_reported_at
+FROM (
+    SELECT DISTINCT ON (t.building_id, t.floor_id, t.room_id)
+        t.building_id, b.name AS building_name, t.floor_id, f.name AS floor_name,
+        t.room_id, rm.name AS room_name, t.location_detail, t.created_at AS last_reported_at
+    FROM repair.tickets t
+    JOIN platform.buildings b ON b.id = t.building_id AND b.is_active
+    JOIN platform.floors f ON f.id = t.floor_id AND f.is_active
+    JOIN platform.rooms rm ON rm.id = t.room_id AND rm.is_active AND rm.floor_id = t.floor_id
+    WHERE t.reporter_id = @reporter_id
+    ORDER BY t.building_id, t.floor_id, t.room_id, t.created_at DESC
+) p
+ORDER BY p.last_reported_at DESC
+LIMIT 3;
+
+-- name: LockDuplicateKey :exec
+-- Serialises reports on one category + floor + room, so two people sending the same problem at the
+-- same moment cannot both pass the duplicate check (BR-F03-2, CR-009).
+SELECT pg_advisory_xact_lock(hashtextextended(@key::text, 0));
+
+-- name: ListDuplicateTickets :many
+-- F03 (BR-F03-1, CR-009 / CR-014): open tickets with the same category, floor and room; old tickets
+-- without a room match when their location text equals the room name (trimmed, case-insensitive).
+-- CR-020: `blocks_report` = the report is a duplicate of it: the reporter gave no extra spot (@spot is
+-- the normalised spot, '' when empty) or the same spot. A different spot is only "similar" (allowed).
+-- Old tickets have no separate spot (their text is the room name), so only an empty @spot blocks.
+-- Blocking matches come first so MaxDuplicates never cuts one off.
+SELECT t.id, t.reporter_id, t.status,
+       (CASE WHEN t.room_id IS NULL THEN @spot::text = ''
+             ELSE @spot::text = '' OR lower(regexp_replace(btrim(coalesce(t.location_detail, '')), '\s+', ' ', 'g')) = @spot::text
+        END)::boolean AS blocks_report
+FROM repair.tickets t
+WHERE t.status IN ('in_progress', 'resolved')
+  AND t.category_id = @category_id AND t.floor_id = @floor_id
+  AND (t.room_id = @room_id
+       OR (t.room_id IS NULL AND lower(btrim(t.location_detail)) =
+           (SELECT lower(btrim(rm.name)) FROM platform.rooms rm WHERE rm.id = @room_id)))
+ORDER BY blocks_report DESC, t.created_at DESC, t.id
+LIMIT @max_rows;
+
+-- name: InsertSubscriber :execrows
+-- F03: 0 rows = already following.
+INSERT INTO repair.ticket_subscribers (ticket_id, user_id, created_at, updated_at)
+VALUES (@ticket_id, @user_id, @now, @now)
+ON CONFLICT (ticket_id, user_id) DO NOTHING;
+
+-- name: ListTechnicians :many
+-- #36 (CR-034): everyone whose role has `repair.ticket.work`; super_admin has every key in code (BR-F25-1).
+SELECT st.id, st.name, st.role_name
+FROM repair.staff st
+WHERE st.role_key = 'super_admin' OR EXISTS (
+    SELECT 1 FROM platform.role_permissions rp JOIN platform.roles r ON r.id = rp.role_id
+    WHERE r.key = st.role_key AND rp.permission = 'repair.ticket.work')
+ORDER BY st.name COLLATE "th-x-icu", st.id;
+
+-- name: IsTechnician :one
+-- #9 (CR-034): the picked assignee still has `repair.ticket.work` (same rule as ListTechnicians).
+SELECT EXISTS (
+    SELECT 1 FROM repair.staff st
+    WHERE st.id = @id AND (st.role_key = 'super_admin' OR EXISTS (
+        SELECT 1 FROM platform.role_permissions rp JOIN platform.roles r ON r.id = rp.role_id
+        WHERE r.key = st.role_key AND rp.permission = 'repair.ticket.work')))::boolean;

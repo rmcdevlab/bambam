@@ -1,0 +1,169 @@
+[
+  {
+    "key": "repair",
+    "name": "ระบบแจ้งซ่อม",
+    "groups": [
+      {
+        "key": "repair.access",
+        "name": "การใช้บริการแจ้งซ่อม",
+        "isFixed": false,
+        "permissions": [
+          {
+            "key": "repair.ticket.report",
+            "label": "แจ้งซ่อม",
+            "description": "แจ้งงานใหม่ สแกน QR แจ้ง และติดตามเคสเดิม",
+            "requires": null
+          }
+        ]
+      },
+      {
+        "key": "repair.ticket",
+        "name": "งานแจ้งซ่อม",
+        "isFixed": false,
+        "permissions": [
+          {
+            "key": "repair.ticket.view_all",
+            "label": "ดูทุกงาน",
+            "description": "เห็นงานซ่อมทุกงาน รวมชื่อและคะแนนช่างภายนอก",
+            "requires": null
+          },
+          {
+            "key": "repair.ticket.work",
+            "label": "ดำเนินการและบันทึกผลซ่อม",
+            "description": "งานซ่อมทุกงานส่งถึง role นี้ ประเมินวันคาดว่าเสร็จ และบันทึกผลซ่อม",
+            "requires": null
+          },
+          {
+            "key": "repair.ticket.close_any",
+            "label": "ปิดงานใดก็ได้",
+            "description": "ปิดงานได้โดยไม่ต้องรอผู้แจ้งตรวจรับ",
+            "requires": null
+          }
+        ]
+      },
+      {
+        "key": "repair.team",
+        "name": "งานทีม ช่างภายนอก และภาพรวมอาคาร",
+        "isFixed": false,
+        "permissions": [
+          {
+            "key": "repair.ticket.team_handle",
+            "label": "บันทึกงานทีมทำเอง",
+            "description": "บันทึกงานที่ทีมทำเอง และส่งต่องานที่ตัวเองบันทึกให้ช่าง",
+            "requires": null
+          },
+          {
+            "key": "repair.ticket.handover_any",
+            "label": "ส่งต่องานทีมทุกงาน",
+            "description": "ส่งต่องานทีมทำเองของทุกคนให้ช่าง",
+            "requires": null
+          },
+          {
+            "key": "repair.contractor.manage",
+            "label": "จัดการช่างภายนอก",
+            "description": "เพิ่มและแก้ไขข้อมูลช่างภายนอก",
+            "requires": null
+          },
+          {
+            "key": "repair.overview.view",
+            "label": "ดูภาพรวมอาคาร",
+            "description": "ดู dashboard อาคารและงานที่ยังไม่ปิด",
+            "requires": null
+          },
+          {
+            "key": "repair.building3d.view",
+            "label": "ดูโมเดล 3D อาคาร",
+            "description": "ดูโมเดล 3 มิติของอาคารและภาพรวมพื้นที่ใน dashboard (ต้องมีสิทธิ์ดูภาพรวมอาคาร)",
+            "requires": "repair.overview.view"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "services",
+    "name": "การเข้าใช้บริการ",
+    "groups": [
+      {
+        "key": "services.booking",
+        "name": "ระบบจองรถและห้องประชุม",
+        "isFixed": false,
+        "permissions": [
+          {
+            "key": "car_booking.use",
+            "label": "ใช้ระบบจองรถ",
+            "description": "เห็นบริการจองรถในหน้าแรกและเมนู",
+            "requires": null
+          },
+          {
+            "key": "room_booking.use",
+            "label": "ใช้ระบบจองห้องประชุม",
+            "description": "เห็นบริการจองห้องประชุมในหน้าแรกและเมนู",
+            "requires": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "settings",
+    "name": "ตั้งค่าระบบ",
+    "groups": [
+      {
+        "key": "settings",
+        "name": "ตั้งค่าระบบ",
+        "isFixed": false,
+        "permissions": [
+          {
+            "key": "settings.locations.manage",
+            "label": "อาคารและห้อง",
+            "description": "แก้ชื่ออาคาร ห้อง และประเภทอาคาร",
+            "requires": null
+          },
+          {
+            "key": "settings.assets.manage",
+            "label": "อุปกรณ์และประเภทอุปกรณ์",
+            "description": "เพิ่ม ย้าย แก้ไขอุปกรณ์ในห้องและประเภทอุปกรณ์ รวมการจัดวางใน dashboard",
+            "requires": null
+          },
+          {
+            "key": "settings.categories.manage",
+            "label": "หมวดงานและอาการ",
+            "description": "ตั้งค่าหมวดงาน อาการ และความเร่งด่วน",
+            "requires": null
+          },
+          {
+            "key": "settings.contractor_types.manage",
+            "label": "ประเภทผู้รับเหมา",
+            "description": "ตั้งค่าประเภทผู้รับเหมา",
+            "requires": null
+          },
+          {
+            "key": "settings.users.view",
+            "label": "ดูรายชื่อผู้ใช้",
+            "description": "ดูรายชื่อผู้ใช้และ role ของแต่ละคน (อ่านอย่างเดียว)",
+            "requires": null
+          },
+          {
+            "key": "settings.users.manage",
+            "label": "เปลี่ยน role ผู้ใช้",
+            "description": "เปลี่ยน role ของผู้ใช้ (รวมการดูรายชื่อ)",
+            "requires": null
+          },
+          {
+            "key": "settings.roles.manage",
+            "label": "Role และสิทธิ์",
+            "description": "เพิ่ม แก้ ลบ role และติ๊กสิทธิ์",
+            "requires": null
+          },
+          {
+            "key": "settings.audit.view",
+            "label": "ประวัติการเปลี่ยนแปลง",
+            "description": "ดูว่าใครเปลี่ยนอะไรในตั้งค่าระบบ",
+            "requires": null
+          }
+        ]
+      }
+    ]
+  }
+]
