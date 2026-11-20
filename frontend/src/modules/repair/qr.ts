@@ -1,5 +1,7 @@
 "use client";
 
+import { stripBasePath } from "@/lib/app-path";
+
 import { useSyncExternalStore } from "react";
 
 // Stage 5 QR (F13-B, CR-036 / D-140). A printed label holds `{FRONTEND_URL}/q/{code}` only; the app
@@ -24,7 +26,7 @@ export function assetCodeFromQr(text: string, origin: string = window.location.o
     return null;
   }
   if (url.origin !== origin) return null;
-  const m = QR_PATH.exec(url.pathname);
+  const m = QR_PATH.exec(stripBasePath(url.pathname));
   if (!m) return null;
   let code: string;
   try {

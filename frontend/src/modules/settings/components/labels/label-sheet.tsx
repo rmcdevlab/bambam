@@ -1,4 +1,6 @@
 "use client";
+
+import { appPath } from "@/lib/app-path";
 /* eslint-disable @next/next/no-img-element -- print sheet: a plain image keeps its mm size and loads before window.print(). */
 
 import { QrSvg } from "@/components/shared/qr-svg";
@@ -11,7 +13,7 @@ import type { LabelAsset } from "../../types";
 // short location on one line each. `.qr-mono` = the black-on-white option. The same markup is the on-screen preview
 // (scaled) and the print sheet (`@media print` in LABEL_PRINT_CSS).
 
-const BOARD = "url('/brand/bam-qr-mascot-board.webp')";
+const BOARD = `url("${appPath("/brand/bam-qr-mascot-board.webp")}")`;
 
 /** Print rules: only `.qr-print-root` prints; the app (and the preview dialog) is hidden on paper. */
 export const LABEL_PRINT_CSS = `
@@ -72,7 +74,7 @@ export const LABEL_PRINT_CSS = `
 export function LabelCell({ asset, origin }: { asset: LabelAsset; origin: string }) {
   return (
     <div className="qr-cell" data-testid="qr-label">
-      <div className="qr-head"><strong>สแกนแจ้งปัญหา</strong><span className="qr-brand"><img src="/brand/bam-logo.webp" alt="BAM" /></span></div>
+      <div className="qr-head"><strong>สแกนแจ้งปัญหา</strong><span className="qr-brand"><img src={appPath("/brand/bam-logo.webp")} alt="BAM" /></span></div>
       <div className="qr-mascot" aria-hidden />
       <div className="qr-card"><QrSvg text={labelQrUrl(origin, asset.code)} /></div>
       <div className="qr-paw left" aria-hidden />

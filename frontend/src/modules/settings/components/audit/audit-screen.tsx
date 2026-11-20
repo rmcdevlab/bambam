@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -162,7 +164,7 @@ export function AuditScreen() {
       else params.set(k, v);
     }
     // Native history updates the URL synchronously and Next syncs useSearchParams with it.
-    window.history.replaceState(null, "", `${pathname}${params.size ? `?${params}` : ""}`);
+    window.history.replaceState(null, "", appPath(`${pathname}${params.size ? `?${params}` : ""}`));
   }
 
   useEffect(() => {
@@ -200,7 +202,7 @@ export function AuditScreen() {
 
   const heading = settingsHeading("audit");
   const filtered = type !== "all" || !!actor || range !== DEFAULT_RANGE || !!q;
-  const clear = () => { setText(""); window.history.replaceState(null, "", pathname); };
+  const clear = () => { setText(""); window.history.replaceState(null, "", appPath(pathname)); };
   const actorName = actors.find((a) => a.id === actor)?.name;
 
   if (error !== undefined) {

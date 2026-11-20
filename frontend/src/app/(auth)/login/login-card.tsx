@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import { useState } from "react";
 import Image from "next/image";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
@@ -45,13 +47,13 @@ export function LoginScreen({ signedOut = false }: { signedOut?: boolean }) {
   function start() {
     setBusy(true);
     // Mocks: no SSO, go straight in. Real: full navigation to the API, which redirects to RMC SSO.
-    window.location.assign(env.useMocks ? next : loginUrl(next));
+    window.location.assign(env.useMocks ? appPath(next) : loginUrl(next));
   }
 
   return (
     <div className="bl-page">
       <header className="bl-nav">
-        <Image src="/brand/bam-logo.webp" alt="BAM" width={480} height={154} priority className="bl-logo" />
+        <Image src={appPath("/brand/bam-logo.webp")} alt="BAM" width={480} height={154} priority className="bl-logo" />
         <button type="button" className="bl-help" onClick={() => setHelp(true)}>ความช่วยเหลือ</button>
       </header>
 
@@ -75,7 +77,7 @@ export function LoginScreen({ signedOut = false }: { signedOut?: boolean }) {
         </section>
 
         <div className="bl-visual" aria-hidden>
-          <Image src="/brand/bam-mascot-login-white.webp" alt="" width={631} height={640} priority />
+          <Image src={appPath("/brand/bam-mascot-login-white.webp")} alt="" width={631} height={640} priority />
         </div>
       </main>
 

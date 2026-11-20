@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -72,7 +74,7 @@ export function PlacesScreen() {
       if (v === null || v === "") params.delete(k);
       else params.set(k, v);
     }
-    window.history.replaceState(null, "", `${pathname}${params.size ? `?${params}` : ""}`);
+    window.history.replaceState(null, "", appPath(`${pathname}${params.size ? `?${params}` : ""}`));
   }
 
   useEffect(() => {

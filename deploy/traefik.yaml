@@ -1,0 +1,31 @@
+http:
+  routers:
+    bambam:
+      rule: "Host(`rmc.cipcloud.net`) && (Path(`/bambam`) || PathPrefix(`/bambam/`))"
+      entryPoints: [websecure]
+      priority: 500
+      tls: {}
+      service: bambam
+      middlewares: [bambam-security]
+    bambam-http:
+      rule: "Host(`rmc.cipcloud.net`) && (Path(`/bambam`) || PathPrefix(`/bambam/`))"
+      entryPoints: [web]
+      priority: 500
+      middlewares: [redirect-https]
+      service: noop@internal
+  services:
+    bambam:
+      loadBalancer:
+        servers:
+          - url: http://bambam:3000
+  middlewares:
+    bambam-security:
+      headers:
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: strict-origin-when-cross-origin
+        permissionsPolicy: camera=(self), geolocation=(), microphone=(), payment=(), usb=()
+        stsSeconds: 31536000
+        customResponseHeaders:
+          X-Robots-Tag: noindex, nofollow
+          X-Powered-By: ""

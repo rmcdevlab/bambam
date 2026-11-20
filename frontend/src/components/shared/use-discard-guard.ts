@@ -1,5 +1,7 @@
 "use client";
 
+import { stripBasePath } from "@/lib/app-path";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -64,7 +66,7 @@ export function useDiscardGuard(dirty: boolean) {
       event.preventDefault(); event.stopImmediatePropagation();
       pending.current = () => {
         bypass.current = true;
-        const go = () => router.push(url.pathname + url.search + url.hash);
+        const go = () => router.push(stripBasePath(url.pathname) + url.search + url.hash);
         if (guarded.current) { guarded.current = false; afterCollapse.current = go; window.history.back(); } else go();
       };
       setOpen(true);

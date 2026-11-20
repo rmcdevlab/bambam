@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -107,8 +109,7 @@ function RolePicker({ current, inSheet, onDone }: { current: Role; inSheet: bool
       }
       onDone();
       // Hard navigation drops every cached piece of data from the previous user (S15).
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- hard navigation on purpose: drop all client state
-      window.location.assign("/");
+      window.location.assign(appPath("/"));
     } catch {
       toast.error("สลับบทบาทไม่สำเร็จ ลองอีกครั้ง");
       setBusy(false);

@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import {
@@ -44,7 +46,7 @@ export function LogoutDialog({ trigger, open, onOpenChange, onCloseAutoFocus }: 
           <AlertDialogCancel disabled={busy}>ยกเลิก</AlertDialogCancel>
           <form
             method="post"
-            action={env.useMocks ? "/signed-out" : LOGOUT_URL}
+            action={env.useMocks ? appPath("/signed-out") : LOGOUT_URL}
             onSubmit={(e) => {
               // Draft photos live in IndexedDB (async): clear them first, then submit for real.
               e.preventDefault();
@@ -52,8 +54,7 @@ export function LogoutDialog({ trigger, open, onOpenChange, onCloseAutoFocus }: 
               setBusy(true);
               clearAllDrafts();
               void clearAllDraftPhotos().finally(() => {
-                // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- hard navigation on purpose: drop all client state
-                if (env.useMocks) window.location.assign("/signed-out");
+                if (env.useMocks) window.location.assign(appPath("/signed-out"));
                 else form.submit();
               });
             }}

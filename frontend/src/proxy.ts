@@ -1,3 +1,4 @@
+import { appPath, stripBasePath } from "@/lib/app-path";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Frontend auth gate (docs/shared/integrations/sso.md). It only checks that a
@@ -22,13 +23,13 @@ export function proxy(request: NextRequest) {
     // With ?reason / ?error the page must show its message, so stay.
     const params = request.nextUrl.searchParams;
     if (pathname === "/login" && hasSession && !params.has("reason") && !params.has("error")) {
-      return NextResponse.redirect(new URL(safeNext(params.get("next")), request.url));
+      return NextResponse.redirect(new URL(appPath(safeNext(params.get("next"))), request.url));
     }
     return NextResponse.next();
   }
 
   if (!hasSession) {
-    const url = new URL("/login", request.url);
+    const url = new URL(appPath("/login"), request.url);
     url.searchParams.set("next", pathname + search);
     // The browser had a session before → it expired (S01 ?reason=expired).
     if (request.cookies.get(SEEN_COOKIE)?.value) url.searchParams.set("reason", "expired");
@@ -38,6 +39,7 @@ export function proxy(request: NextRequest) {
 }
 
 function safeNext(next: string | null): string {
+  next = next ? stripBasePath(next) : next;
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\") || /[\r\n\\]/.test(next)) {
     return "/";
   }

@@ -1,18 +1,15 @@
 # Settings — Progress
 
-**Phase:** P5 Build · **Product stage:** R1 accepted, R2 pending · **Updated:** 2026-11-19
+**Phase:** P5 Build · **Product stage:** R1 accepted, R2 pending · **Updated:** 2026-11-20
 
 ## Now
 
-- Owner requested environment-only credentials: Docker PostgreSQL reads ignored `.env.local`; Playwright/Atlas use isolated `.env.test.local` with no database/signing-secret fallback. Synthetic tokens are generated at runtime. Templates contain no passwords/secrets. No tests/build run.
+- Owner authorized committing/pushing branch `release` to verify GHCR deployment. Runner `bambam-rmc-prod` is online and enabled at boot; workflow builds on GitHub-hosted Ubuntu and deploys an immutable digest on the server. First Actions run pending.
 
-- Owner requested Playwright for testing: `npm test` runs browser flows; `npm run test:server` now runs existing server assertions with Playwright and named steps. Temporary output is deleted; recordings remain off. No tests/build run for this change.
-
-- Additional owner cleanup: removed regenerated Next cache, e2e photo fixtures, superseded UI reference screenshots and obsolete Go CI. Owner authorized deleting all local Git history and starting a new main-branch baseline; origin is retained without pushing. No tests/build run.
-
-- CR-056 implemented: settings APIs, users/roles/permissions, audit, locations/assets/master data and QR label operations now run in Next.js.
-- Go removed; the application starts with `cd frontend && npm run dev` and PostgreSQL.
-- Owner requested stopping verification and removing generated/unnecessary files. Final changes were not re-tested.
+- Owner-authorized deployment at https://rmc.cipcloud.net/bambam on 192.168.1.143; Docker app `bambam`, persistent photos and interval maintenance. Existing external DATABASE_URL and Superadmin roles retained; backup saved before deployment.
+- SYNQ containers stopped and its deployment runner disabled; existing volumes retained.
+- Subpath support covers links, browser history, images, APIs, QR links and SSO redirects/cookies. Root-path local development remains supported.
+- CR-056 migration/cleanup retained. Product stages have not advanced through deployment.
 
 ## Done
 
@@ -22,15 +19,27 @@
 
 ## Next
 
-- Product R2 remains pending; no additional UI scope was introduced by migration.
-- Resume verification only if requested. Report: `../repair/changes/CR-056-completion.md`.
+- Owner to verify a complete SSO login with a real account; provider registration and browser handoff are verified, credential entry/token exchange were not exercised.
+- Owner will upload replacement photos later; the 41 existing database photo records were retained without their missing files.
+- Product R2 remains pending.
 
 ## Open issues
 
-- Final migration/cleanup changes are unverified at the owner's request; live SSO and deployment remain unverified.
-- Hosting is undecided; production needs persistent storage and reliable scheduling.
+- Complete authenticated browser workflows were not run against production. Two database integration suites were skipped because CR056_TEST_DATABASE_URL was not configured; no production test data was created.
+- Existing photo files are unavailable; replacement uploads are deferred by the owner.
+
+## Deployment report — 2026-11-20
+
+- Built: Docker/Traefik deployment and configurable `/bambam` hosting; recipe in `deploy/README.md`. Private runtime env lives only on the server, outside the image/build context.
+- Acceptance: ✅ SYNQ stopped; ✅ production container healthy; ✅ existing database retained/backed up; ✅ public login/assets/API guards; ✅ SSO callback accepted and browser reaches Sign In; ✅ persistent photo writes; ⏳ real-account sign-in.
+- Demo: open https://rmc.cipcloud.net/bambam and use an existing RMC SSO account (no test account created). Ops: `ssh root@192.168.1.143`, `cd /opt/rmc-deploy/bambam`, `docker compose ps` / `docker compose logs --tail 50 app`.
+- Checks: lint/typecheck/production build passed; 18 server tests passed, 2 database suites skipped. Subpath proxy, SSO cookie/callback and QR checks passed; public browser smoke passed without runtime/asset errors. No full production e2e claimed.
+- Shared code touched: `frontend/src/components/shared`, `frontend/src/lib`, server platform auth/HTTP, proxy and Next configuration. No backend schema or API contract change.
+- Backup: `/opt/rmc-deploy/bambam/backups/before-deploy-20261120.dump` (private permissions). No commit, tag or push.
 
 ## Stage log
 
 - Settings Stages 1–6, 4P, R1 and CR-008 history is recorded in `docs/DECISIONS.md`; old Git history was deleted at the owner's request.
 - 2026-11-19: CR-056 migration/cleanup delivered. Included in the new initial baseline; no tag/push.
+- 2026-11-20: Owner deployment request completed; SYNQ disabled, existing PostgreSQL reused, production SSO registration accepted. Full login remains an owner check; photos deferred.
+- 2026-11-20: BAMBAM runner configured; release workflow/actionlint and deployment success/rollback/migration-failure checks passed locally. Owner authorized the first release push.

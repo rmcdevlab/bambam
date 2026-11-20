@@ -1,3 +1,4 @@
+import { appPath } from "@/lib/app-path";
 import { Building2, HardHat, History, ShieldCheck, Tags, Users, Wrench, type LucideIcon } from "lucide-react";
 import { canAny, PERM, type PermissionKey } from "@/lib/platform/permissions";
 import type { Me } from "@/lib/platform/types";
@@ -142,7 +143,7 @@ export function settingsAccess(me: Me, pathname: string): SettingsAccess {
 /** Decorative mascot beside the page heading (CR-003): guardian for Superadmin, planner for everyone else. `alt=""`. */
 export function settingsMascot(me: Me): { src: string; alt: "" } {
   return {
-    src: me.role === "super_admin" ? "/brand/bam-mascot-superadmin-guardian-white.webp" : "/brand/bam-mascot-admin-planner-white.webp",
+    src: appPath(me.role === "super_admin" ? "/brand/bam-mascot-superadmin-guardian-white.webp" : "/brand/bam-mascot-admin-planner-white.webp"),
     alt: "",
   };
 }

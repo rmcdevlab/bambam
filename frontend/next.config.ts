@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 // CR-056: UI and API are served by this Next.js runtime.
 const nextConfig: NextConfig = {
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
   // NEXT_DIST_DIR: the e2e / Atlas test stack runs `next dev` beside the dev server, so it needs its own
   // folder (`next dev` locks <distDir>/dev). Unset = the default .next (frontend/e2e/test-stack.cjs).
   distDir: process.env.NEXT_DIST_DIR || ".next",

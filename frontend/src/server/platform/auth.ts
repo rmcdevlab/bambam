@@ -1,15 +1,16 @@
+import { appPath, basePath } from "@/lib/app-path";
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { config } from "./config";
 import { challenge, equal, randomToken, safeNext, signFlow, validateIDToken, verifyFlow } from "./crypto";
 import { createSession, deleteSession, upsertSSO } from "./service";
-const cookieOptions = { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/" };
+const cookieOptions = { httpOnly: true, secure: true, sameSite: "lax" as const, path: basePath || "/" };
 export function setSession(response: NextResponse, session: { token: string; expires: Date }) {
   response.cookies.set("bam_session", session.token, { ...cookieOptions, expires: session.expires, maxAge: Math.floor((session.expires.getTime() - Date.now()) / 1000) });
   response.cookies.set("bam_seen", "1", { ...cookieOptions, maxAge: 30 * 86400 });
 }
-function redirect(url: string) { return new NextResponse(null, { status: 302, headers: { Location: url } }); }
-function clearFlow(response: NextResponse) { response.cookies.set("bam_oidc", "", { ...cookieOptions, path: "/api/auth", maxAge: 0 }); return response; }
+function redirect(url: string) { return new NextResponse(null, { status: 302, headers: { Location: appPath(url) } }); }
+function clearFlow(response: NextResponse) { response.cookies.set("bam_oidc", "", { ...cookieOptions, path: appPath("/api/auth"), maxAge: 0 }); return response; }
 export async function login(request: NextRequest) {
   const c = config(), state = randomToken(), verifier = randomToken(48);
   const flow = { s: state, v: verifier, n: safeNext(request.nextUrl.searchParams.get("next")), e: Math.floor(Date.now() / 1000) + 600 };
@@ -17,7 +18,7 @@ export async function login(request: NextRequest) {
   for (const [key, value] of Object.entries({ response_type: "code", client_id: c.SSO_CLIENT_ID,
     redirect_uri: c.SSO_REDIRECT_URI, scope: c.SSO_SCOPE, state, code_challenge: challenge(verifier), code_challenge_method: "S256" })) url.searchParams.set(key, value);
   const response = redirect(url.toString());
-  response.cookies.set("bam_oidc", signFlow(c.APP_SESSION_SECRET, flow), { ...cookieOptions, path: "/api/auth", maxAge: 600 });
+  response.cookies.set("bam_oidc", signFlow(c.APP_SESSION_SECRET, flow), { ...cookieOptions, path: appPath("/api/auth"), maxAge: 600 });
   return response;
 }
 async function providerJSON(url: string, init: RequestInit): Promise<Record<string, unknown>> {

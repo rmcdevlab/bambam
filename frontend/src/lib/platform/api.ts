@@ -1,3 +1,4 @@
+import { appPath, stripBasePath } from "@/lib/app-path";
 import { env } from "@/lib/env";
 import { http } from "@/lib/http";
 import { mockDemoUsers, mockMeByRole } from "./mocks";
@@ -53,14 +54,15 @@ export async function switchRole(role: Role): Promise<Me> {
 
 /** Login start (S01). Full-page navigation: the API redirects to RMC SSO. */
 export function loginUrl(next: string): string {
-  return `/api/auth/login?${new URLSearchParams({ next: safeNext(next) })}`;
+  return appPath(`/api/auth/login?${new URLSearchParams({ next: safeNext(next) })}`);
 }
 
 /** Logout endpoint: POSTed by a form so the browser follows the redirect to SSO End Session. */
-export const LOGOUT_URL = "/api/auth/logout";
+export const LOGOUT_URL = appPath("/api/auth/logout");
 
 /** Same-origin relative paths only; anything else becomes "/" (S01). Mirrors auth.SafeNext in Go. */
 export function safeNext(next: string | null | undefined): string {
+  next = next ? stripBasePath(next) : next;
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\") || /[\r\n\\]/.test(next)) {
     return "/";
   }

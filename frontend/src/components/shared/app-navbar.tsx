@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -56,7 +58,7 @@ export function AppNavbar({ me }: { me: Me }) {
           aria-label="BAMBAM หน้าแรก"
           className="flex shrink-0 flex-col items-start gap-0.75 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/30 lg:mr-14"
         >
-          <Image src="/brand/bam-logo.webp" alt="BAMBAM" width={96} height={31} className="h-7 w-auto lg:h-7.5" priority />
+          <Image src={appPath("/brand/bam-logo.webp")} alt="BAMBAM" width={96} height={31} className="h-7 w-auto lg:h-7.5" priority />
           <span className="pl-0.5 text-[9px] leading-none font-semibold tracking-[0.32em] text-muted-foreground">WORKPLACE</span>
         </Link>
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, Info, Lock, Search } from "lucide-react";
@@ -53,7 +55,7 @@ export function UsersScreen() {
       if (v === null || v === "") params.delete(k);
       else params.set(k, v);
     }
-    const url = `${pathname}${params.size ? `?${params}` : ""}`;
+    const url = appPath(`${pathname}${params.size ? `?${params}` : ""}`);
     // Native history updates the URL synchronously and Next syncs useSearchParams with it.
     if (push) window.history.pushState(null, "", url);
     else window.history.replaceState(null, "", url);

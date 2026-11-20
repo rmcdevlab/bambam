@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Building2, FileText, ListChecks, Sparkles } from "lucide-react";
 import { Mascot } from "@/components/shared/mascot";
@@ -21,7 +23,7 @@ import { attentionBadge, attentionReason, type AttentionReason, type AttentionTo
 // `ดู Ticket นี้` and the `ควรติดตาม n งาน` pill open the S29 choice popups (detail S07 or the model).
 // Amendment 2 preserved: the last pose has an open palm towards the card, after the plan has opened.
 
-const ATLAS = "/brand/bam-mascot-admin-sequence-v3.webp"; // 6 × 4, 256px square frames, genuine alpha.
+const ATLAS = appPath("/brand/bam-mascot-admin-sequence-v3.webp"); // 6 × 4, 256px square frames, genuine alpha.
 type Pose = { frame: number };
 
 // Time for the finer gestures, a readable greeting and a pause to study the open plan.

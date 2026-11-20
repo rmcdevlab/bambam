@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import { createElement, useEffect, useState } from "react";
 import { AlertCircle, AlertTriangle, ArrowDown, ArrowUp, ChevronRight, Info, MoreHorizontal, Pencil, Plus, Power, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -93,7 +95,7 @@ export function CategoriesScreen({ categoryId }: { categoryId?: string }) {
 
   function select(id: string) {
     setSelectedId(id);
-    window.history.replaceState(null, "", `/settings/categories/${id}`);
+    window.history.replaceState(null, "", appPath(`/settings/categories/${id}`));
     // phones stack the panels: bring the chosen category's symptoms into view
     if (!window.matchMedia(DESKTOP_QUERY).matches) window.requestAnimationFrame(() => document.getElementById("category-detail")?.scrollIntoView({ block: "start", behavior: "smooth" }));
   }
@@ -161,7 +163,7 @@ export function CategoriesScreen({ categoryId }: { categoryId?: string }) {
           await deleteCategory(c.id);
           toast.success(`ลบ "${c.name}" แล้ว`);
           setSelectedId(undefined);
-          window.history.replaceState(null, "", "/settings/categories");
+          window.history.replaceState(null, "", appPath("/settings/categories"));
           await reloadCategories();
         } catch (err) {
           failed(err, reloadCategories);

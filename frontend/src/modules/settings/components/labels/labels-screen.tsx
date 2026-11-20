@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -99,7 +101,7 @@ export function LabelsScreen() {
       if (v) params.set(k, v);
       else params.delete(k);
     }
-    window.history.replaceState(null, "", `${pathname}${params.size ? `?${params}` : ""}`);
+    window.history.replaceState(null, "", appPath(`${pathname}${params.size ? `?${params}` : ""}`));
   }
 
   useEffect(() => {

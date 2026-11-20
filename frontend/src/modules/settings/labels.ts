@@ -1,3 +1,4 @@
+import { appPath } from "@/lib/app-path";
 import type { LabelStatus } from "./types";
 
 // QR labels (settings CR-007, repair CR-036 / F13-A, Stage 5B): the text and link printed on a label, shared by S30 and S20.
@@ -26,7 +27,7 @@ export function shortLocation(p: { building: { name: string }; floor: { name: st
 
 /** What the QR encodes: `{FRONTEND_URL}/q/{code}` (repair #25 route handler redirects to the prefilled S03). */
 export function labelQrUrl(origin: string, code: string): string {
-  return `${origin.replace(/\/$/, "")}/q/${encodeURIComponent(code)}`;
+  return `${origin.replace(/\/$/, "")}${appPath(`/q/${encodeURIComponent(code)}`)}`;
 }
 
 /** S20 / S30 badge copy per `labelStatus`; `current` has none. */

@@ -1,3 +1,4 @@
+import { appPath } from "@/lib/app-path";
 import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -5,13 +6,13 @@ import { cn } from "@/lib/utils";
 // White BAM tiger (CR-029): PNG masters and matching WebP exports in public/brand.
 // White-specific filenames also refresh previously optimised orange-tiger images.
 const SOURCES = {
-  welcome: { src: "/brand/bam-mascot-welcome-white.webp", width: 493, height: 560 },
-  guide: { src: "/brand/bam-mascot-guide-white.webp", width: 514, height: 560 },
-  review: { src: "/brand/bam-mascot-review-white.webp", width: 469, height: 560 },
-  tracking: { src: "/brand/bam-mascot-tracking-white.webp", width: 397, height: 560 },
-  loading: { src: "/brand/bam-mascot-loading-white.webp", width: 428, height: 560 },
+  welcome: { src: appPath("/brand/bam-mascot-welcome-white.webp"), width: 493, height: 560 },
+  guide: { src: appPath("/brand/bam-mascot-guide-white.webp"), width: 514, height: 560 },
+  review: { src: appPath("/brand/bam-mascot-review-white.webp"), width: 469, height: 560 },
+  tracking: { src: appPath("/brand/bam-mascot-tracking-white.webp"), width: 397, height: 560 },
+  loading: { src: appPath("/brand/bam-mascot-loading-white.webp"), width: 428, height: 560 },
   // S01 login (CR-019 follow-up, bam-workplace-login-v7.html): presenting, with the staff badge.
-  login: { src: "/brand/bam-mascot-login-white.webp", width: 631, height: 640 },
+  login: { src: appPath("/brand/bam-mascot-login-white.webp"), width: 631, height: 640 },
 } as const;
 
 export type MascotPose = keyof typeof SOURCES;

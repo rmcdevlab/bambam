@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { ArrowRight, ClipboardCheck, Plus } from "lucide-react";
@@ -13,7 +15,7 @@ import { Mascot } from "@/components/shared/mascot";
 // pose 1.6s) — the glow overlaps the final pose. Timers pause when the hero is offscreen or the tab hidden. Reduced
 // motion or a sprite that fails to decode: the static pose + bubble.
 
-const SPRITE = "/brand/bam-mascot-actions-white.webp";
+const SPRITE = appPath("/brand/bam-mascot-actions-white.webp");
 type Beat = { frame: number; ms: number; phase: "walk" | "turn" | "greet" | "present" | "idle" };
 const SEQUENCE: Beat[] = [
   ...Array.from({ length: 12 }, (_, i): Beat => ({ frame: i % 6, ms: 140, phase: "walk" })),

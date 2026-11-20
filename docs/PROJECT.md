@@ -36,12 +36,12 @@ Platform migration: `docs/modules/repair/changes/CR-056.md`; all migration stage
 
 | | development | UAT | production |
 |---|---|---|---|
-| Frontend URL | http://localhost:3000 | ✏️ | ✏️ (ยังไม่ได้ลงทะเบียนกับ SSO) |
-| API URL | http://localhost:3000/api/v1 (same Next.js runtime, CR-056) | ✏️ | ✏️ |
-| Database | local docker | ✏️ | ✏️ |
+| Frontend URL | http://localhost:3000 | ✏️ | https://rmc.cipcloud.net/bambam (SSO callback registered; browser handoff verified) |
+| API URL | http://localhost:3000/api/v1 (same Next.js runtime, CR-056) | ✏️ | https://rmc.cipcloud.net/bambam/api/v1 |
+| Database | ignored `.env.local` `DATABASE_URL` | ✏️ | Existing external PostgreSQL; private deployment `DATABASE_URL` |
 | SSO | RMC SSO client `bam` (DEV) | ✏️ | RMC SSO client `bam` (PROD) |
 | Role switcher | เปิด (D-005) | เปิด (D-005) | **ไม่มี** |
-| How it gets there | `cd frontend && npm run dev` (CR-056) | ✏️ | ✏️ |
+| How it gets there | `cd frontend && npm run dev` (CR-056) | ✏️ | Docker Compose at `/opt/rmc-deploy/bambam` on `192.168.1.143`; Traefik; see `deploy/README.md` |
 
 ## Locale
 

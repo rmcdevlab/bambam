@@ -1,3 +1,4 @@
+import { appPath, stripBasePath } from "@/lib/app-path";
 import { env } from "@/lib/env";
 
 /**
@@ -57,11 +58,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<{ da
 
 /** Session expired → S01 `/login?reason=expired&next=<current page>` (_common.md §6). */
 export function redirectToLogin(reason?: "expired") {
-  const next = window.location.pathname + window.location.search;
+  const next = stripBasePath(window.location.pathname) + window.location.search;
   const q = new URLSearchParams({ next });
   if (reason) q.set("reason", reason);
-  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- hard navigation on purpose: drop all client state
-  window.location.assign(`/login?${q}`);
+  window.location.assign(appPath(`/login?${q}`));
 }
 
 export type UploadOptions = {

@@ -1,4 +1,5 @@
 import "server-only";
+import { basePath } from "@/lib/app-path";
 import { randomUUID } from "node:crypto";
 import { NextResponse, connection } from "next/server";
 import { ApiError } from "./errors";
@@ -13,7 +14,7 @@ export function endpoint(handler: (request: import("next/server").NextRequest) =
       const e = error instanceof ApiError ? error : new ApiError("internal", "INTERNAL", "internal error");
       if (!(error instanceof ApiError)) console.error(JSON.stringify({ event: "api_failed", request_id: id }));
       response = NextResponse.json({ error: { code: e.code, message: e.message, ...(e.fields ? { fields: e.fields } : {}), ...(e.details !== undefined ? { details: e.details } : {}) } }, { status: statuses[e.kind] });
-      if (e.kind === "unauthenticated") response.cookies.set("bam_session", "", { path: "/", maxAge: 0, httpOnly: true, secure: true, sameSite: "lax" });
+      if (e.kind === "unauthenticated") response.cookies.set("bam_session", "", { path: basePath || "/", maxAge: 0, httpOnly: true, secure: true, sameSite: "lax" });
     }
     response.headers.set("Cache-Control", "no-store");
     response.headers.set("X-Request-ID", id);

@@ -1,7 +1,8 @@
+import { appPath } from "@/lib/app-path";
 import "server-only";
 import { rows, one, ref, camel, type Row, type DB } from "../platform/query";
 import type { User } from "../platform/service";
-export const photo = (id:string)=>({id,thumbUrl:`/api/v1/repair/photos/${id}?size=thumb`,url:`/api/v1/repair/photos/${id}?size=full`});
+export const photo = (id:string)=>({id,thumbUrl:appPath(`/api/v1/repair/photos/${id}?size=thumb`),url:appPath(`/api/v1/repair/photos/${id}?size=full`)});
 export const staff=(r:Row,p:string)=>r[`${p}_id`]?{...ref(r,p),roleName:r[`${p}_role_name`]}:null;
 export const person=(r:Row,p:string)=>r[`${p}_id`]?{...ref(r,p),department:r[`${p}_department`]??null}:null;
 export function step(r:Row) {return r.status==="closed"?"closed":r.status==="resolved"?"awaiting_rating":!r.expected_done_on?"awaiting_assessment":r.send_back_count>0?"reworking":"in_repair";}

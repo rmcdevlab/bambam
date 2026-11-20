@@ -1,5 +1,7 @@
 "use client";
 
+import { stripBasePath } from "@/lib/app-path";
+
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
@@ -9,8 +11,8 @@ const origins = new Map<string, string>();
 const LISTS = new Set(["/repair/my", "/repair/work", "/repair/admin/queue"]);
 
 export function rememberTicketOrigin(href: string) {
-  if (LISTS.has(window.location.pathname)) {
-    origins.set(href.split("?")[0], window.location.pathname + window.location.search);
+  if (LISTS.has(stripBasePath(window.location.pathname))) {
+    origins.set(href.split("?")[0], stripBasePath(window.location.pathname) + window.location.search);
   }
 }
 

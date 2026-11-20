@@ -1,5 +1,7 @@
 "use client";
 
+import { appPath } from "@/lib/app-path";
+
 /* eslint-disable @next/next/no-img-element -- print report: plain images keep their mm size; photo paths are authenticated API URLs (HANDOFF). */
 import { useEffect, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
@@ -139,12 +141,12 @@ export function TicketReport({ ticket, viewer, story }: { ticket: TicketDetail; 
   return <div className="tr hidden print:block" data-testid="ticket-report">
     <style>{REPORT_CSS}{footer}</style>
     <header className="tr-head">
-      <img src="/brand/bam-logo.webp" alt="BAMBAM" className="tr-logo" />
+      <img src={appPath("/brand/bam-logo.webp")} alt="BAMBAM" className="tr-logo" />
       <div className="tr-title">
         <h1>รายงานการดำเนินงาน</h1>
         <p>หมายเลขรายการ: <b>{ticket.ticketNo}</b></p>
       </div>
-      {origin && <div className="tr-qr"><QrSvg text={`${origin}${ticketHref(ticket.id)}`} /></div>}
+      {origin && <div className="tr-qr"><QrSvg text={`${origin}${appPath(ticketHref(ticket.id))}`} /></div>}
     </header>
 
     <Section title="ข้อมูลทั่วไป">
