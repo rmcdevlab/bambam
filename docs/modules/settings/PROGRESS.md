@@ -4,7 +4,7 @@
 
 ## Now
 
-- Owner authorized committing/pushing branch `release` to verify GHCR deployment. Runner `bambam-rmc-prod` is online and enabled at boot; workflow builds on GitHub-hosted Ubuntu and deploys an immutable digest on the server. First Actions run pending.
+- Owner authorized committing/pushing branch `release` to verify GHCR deployment. Runner `bambam-rmc-prod` is online and enabled at boot; workflow builds on GitHub-hosted Ubuntu and deploys an immutable digest on the server. First Actions run 44654161312 completed successfully (commit 27ab6b9); the running image is pinned to the published GHCR digest.
 
 - Owner-authorized deployment at https://rmc.cipcloud.net/bambam on 192.168.1.143; Docker app `bambam`, persistent photos and interval maintenance. Existing external DATABASE_URL and Superadmin roles retained; backup saved before deployment.
 - SYNQ containers stopped and its deployment runner disabled; existing volumes retained.
@@ -43,3 +43,10 @@
 - 2026-11-19: CR-056 migration/cleanup delivered. Included in the new initial baseline; no tag/push.
 - 2026-11-20: Owner deployment request completed; SYNQ disabled, existing PostgreSQL reused, production SSO registration accepted. Full login remains an owner check; photos deferred.
 - 2026-11-20: BAMBAM runner configured; release workflow/actionlint and deployment success/rollback/migration-failure checks passed locally. Owner authorized the first release push.
+
+## Runner / release report — 2026-11-20
+
+- Built: dedicated auto-starting runner at `/opt/actions-runner/bambam`; release push → GHCR build/publish → server deployment. No application/shared source changed beyond the earlier subpath deployment.
+- Acceptance: ✅ runner online/idle; ✅ systemd enabled; ✅ release push triggered Actions; ✅ image published and deployed by digest; ✅ private database backup; ✅ healthy container/public login; ✅ registry credentials cleaned.
+- Checks: actionlint and Bash syntax passed; isolated success, rollout failure, migration failure and public-check failure cases passed. Real Actions build/deploy succeeded: https://github.com/rmcdevlab/bambam/actions/runs/44654161312. Full SSO credential entry remains untested.
+- Demo/ops: push trusted changes to `release`; inspect Actions and https://rmc.cipcloud.net/bambam. Recipe and recovery: `deploy/README.md`. SYNQ remains disabled.
