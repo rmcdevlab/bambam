@@ -1,8 +1,11 @@
 # Repair — Progress
 
-**Phase:** P5 Build · **Product stage:** 6 of 8 next · **Updated:** 2026-11-20
+**Phase:** P5 Build · **Product stage:** 6 of 8 next · **Updated:** 2026-11-22
 
 ## Now
+
+- CR-057 (approved 2026-11-22): every unsaved-changes warning uses the browser dialog, on every form and form dialog (shared `use-unsaved-guard.ts` + `form-dialog.tsx`). Code, docs, e2e updated; typecheck/lint/build pass; e2e not run (no test DB here). Owner accepted 2026-11-22 (`repair-cr-057`).
+- CR-058 (accepted 2026-11-22, `repair-cr-058`): S29 office-side decorative structures removed; อาคาร TrialMix switched off (migration `20261122000001` applied 2026-11-22 to the database in `frontend/.env`).
 
 - Owner authorized committing/pushing branch `release` to verify GHCR deployment. Runner `bambam-rmc-prod` is online and enabled at boot; workflow builds on GitHub-hosted Ubuntu and deploys an immutable digest on the server. First Actions run 44654161312 completed successfully (commit 27ab6b9); the running image is pinned to the published GHCR digest.
 
@@ -26,6 +29,7 @@
 
 ## Open issues
 
+- CR-057: run full e2e on the test stack; iOS Safari shows no refresh / tab-close warning (browser limit).
 - Complete authenticated browser workflows were not run against production. Two database integration suites were skipped because CR056_TEST_DATABASE_URL was not configured; no production test data was created.
 - Existing photo files are unavailable; replacement uploads are deferred by the owner.
 

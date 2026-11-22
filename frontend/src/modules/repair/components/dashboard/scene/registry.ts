@@ -9,7 +9,6 @@ const MODELS: Record<string, () => Promise<BuildingModel>> = {
   // CR-030: the office-side buildings
   b3: () => import("./building-three").then((m) => m.model),
   b4: () => import("./building-four").then((m) => m.model),
-  b5: () => import("./building-trialmix").then((m) => m.model),
   b16: () => import("./building-canteen").then((m) => m.model),
   b17: () => import("./building-hall60").then((m) => m.model),
   // CR-031: the Riverside buildings

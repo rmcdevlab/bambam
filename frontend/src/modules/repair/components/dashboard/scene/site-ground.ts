@@ -3,8 +3,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { rng } from "./kit";
 
 // S29 site view ground (CR-033, re-traced from CR-032): per side the paved site, roads with kerbs (the main
-// road with a dashed centre line), parking stall rows with parked cars, landscape, trees and the small
-// structures that are not site blocks (store, food courts, shops). Decorative only: no business data.
+// road with a dashed centre line), parking stall rows with parked cars, landscape and trees. Decorative only: no
+// business data. CR-058: the small unnamed structures (guard house, food courts, store, shops) were removed.
 // 2026-11-17 map detail (owner: "look more like a real map"), generic street furniture, not surveyed: lane edge
 // lines on the main road, zebra crossings where a site road meets it, street lights, the property boundary line.
 //
@@ -15,15 +15,14 @@ import { rng } from "./kit";
 //   CPAC landuse outline, roads, the parking lot and its aisles, already in site metres (fitted on the office
 //   blocks 1–3, then shifted so OSM's Warehouse 1 lies on its block — same size and angle). Simplified to 1 m.
 //
-// Budget (D-130): everything flat is ONE unlit vertex-coloured mesh; cars, trees, street lights and the small
-// structures are one mesh each (instanced where repeated) — five draw calls and a few thousand triangles per side,
+// Budget (D-130): everything flat is ONE unlit vertex-coloured mesh; cars, trees and street lights are one mesh
+// each (instanced where repeated) — four draw calls and a few thousand triangles per side,
 // no textures, no shadows, nothing animated.
 
 type Pt = readonly [number, number];
 type Line = readonly Pt[];
 /** A row of stalls along a → b; `side` 1 = right of a → b (seen from above, north up), −1 = left. */
 type Row = { a: Pt; b: Pt; side: 1 | -1; deg: number };
-type Shed = { at: Pt; w: number; d: number; deg: number; h: number };
 type Ground = {
   property: Line;
   green: Line[];
@@ -33,7 +32,6 @@ type Ground = {
   lots: Line[];
   rows: Row[];
   trees: Pt[];
-  sheds: Shed[];
 };
 
 export type SideCrossing = { at: Pt; to: 1 | 2; road: string };
@@ -45,8 +43,6 @@ const plan = ([px, py]: Pt): Pt => {
   return [PLAN.s * (PLAN.c * dx - PLAN.n * dy), PLAN.s * (PLAN.n * dx + PLAN.c * dy)];
 };
 const planLine = (l: Line): Line => l.map(plan);
-/** A plan angle (degrees, px space) as a site rotation. */
-const planDeg = (deg: number) => deg - 8.13;
 
 const OFFICE: Ground = {
   property: planLine([[540, 595], [577, 500], [1000, 318], [1280, 432], [1382, 215], [1897, 420], [1752, 1055], [1340, 960], [1050, 842]]),
@@ -85,17 +81,6 @@ const OFFICE: Ground = {
     [800, 700], [822, 706], [845, 712], [868, 720], [972, 775], [995, 785], [1018, 795], [1040, 805], [1062, 812],
     [1030, 668], [1060, 676], [1090, 684], [1120, 692], [1150, 700], [1180, 707], [1065, 770], [1095, 778],
   ].map((p) => plan(p as unknown as Pt)),
-  sheds: [
-    { at: plan([918, 708]), w: 11, d: 5.5, deg: planDeg(107), h: 3.5 }, // guard house 1-SC-F
-    { at: plan([1152, 795]), w: 17, d: 5.5, deg: planDeg(12), h: 3.5 }, // PAYTONG COURT
-    { at: plan([1150, 830]), w: 17, d: 5.5, deg: planDeg(12), h: 3.5 },
-    { at: plan([1292, 855]), w: 14, d: 11, deg: planDeg(12), h: 4 }, // STORE
-    { at: plan([1185, 918]), w: 13, d: 7, deg: planDeg(37), h: 3.5 }, // shops outside the fence: food, book (3), Soonchai (4), S.Kitchen (3)
-    { at: plan([1257, 958]), w: 13, d: 7, deg: planDeg(37), h: 10.5 },
-    { at: plan([1325, 1015]), w: 13, d: 7, deg: planDeg(37), h: 14 },
-    { at: plan([1392, 1068]), w: 13, d: 7, deg: planDeg(37), h: 10.5 },
-    { at: plan([1797, 548]), w: 16, d: 15, deg: planDeg(12), h: 7 }, // building by the steel tower
-  ],
 };
 
 const RIVERSIDE: Ground = {
@@ -130,7 +115,6 @@ const RIVERSIDE: Ground = {
   // cars along the street east of the CCTC (decorative)
   rows: [{ a: [-216.8, 181.4], b: [-234.8, 223.7], side: -1, deg: 90 }],
   trees: [],
-  sheds: [],
 };
 
 const GROUNDS: Record<1 | 2, Ground> = { 1: OFFICE, 2: RIVERSIDE };
@@ -295,8 +279,6 @@ export function buildGround(side: 1 | 2, blocks: { x: number; z: number; rotDeg:
   const median = (l: Pole) => tracks.some(({ main, k }) => main && k !== l.k && distTo(k, l.p) < 12);
   const poles = lights(tracks).filter((l) => free(l.p, 1.5) && offRoad(l.p, 0.8) && !(l.main && median(l)));
   if (poles.length) group.add(lightMesh(poles));
-  const sheds = G.sheds.filter((s) => free(v3(s.at), 0));
-  if (sheds.length) group.add(shedMesh(sheds));
   return group;
 }
 
@@ -401,17 +383,3 @@ function treeMesh(points: THREE.Vector3[], rnd: () => number) {
   return mesh;
 }
 
-/** Small structures that are not site blocks: plain boxes with a roof slab, merged. */
-function shedMesh(sheds: Shed[]) {
-  const geos = sheds.flatMap((s) => {
-    const m = new THREE.Matrix4().makeRotationY((-s.deg * Math.PI) / 180).setPosition(s.at[0], 0, s.at[1]);
-    return [
-      paint(new THREE.BoxGeometry(s.w, s.h, s.d).translate(0, s.h / 2, 0).applyMatrix4(m), 0xe6e3dc),
-      paint(new THREE.BoxGeometry(s.w + 0.3, 0.3, s.d + 0.3).translate(0, s.h, 0).applyMatrix4(m), 0x9aa0a6),
-    ];
-  });
-  const geo = mergeGeometries(geos);
-  for (const g of geos) g.dispose();
-  geo.computeVertexNormals();
-  return new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
-}
