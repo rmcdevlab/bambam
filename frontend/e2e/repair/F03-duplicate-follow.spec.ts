@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { LEAVE_PAGE_MESSAGE } from "../../src/components/shared/unsaved-messages";
 import { API, as, attachPhoto, auth, bangkokToday, fillPlace, myId, placeIds, postTicket, report, tag, uploadPhoto, confirmPopup, submitReady } from "./helpers";
 
 // F03 (Stage 4, CR-009 / CR-020 / CR-021): duplicate = same category + floor + room with no extra spot or the
@@ -92,12 +93,13 @@ test.describe("employee", () => {
     await page.locator('[data-step="problem"]').getByRole("region", { name: "มีคนแจ้งเรื่องนี้ไว้แล้ว" })
       .getByRole("button", { name: "ติดตามเคสนี้" }).waitFor();
     await expect(page.locator('[data-step="send"]')).toBeHidden();
+    // CR-057: the leave warning is the browser dialog; agree to discard.
+    page.once("dialog", (d) => { expect(d.message()).toBe(LEAVE_PAGE_MESSAGE); void d.accept(); });
     await page.getByRole("navigation", { name: /^(เส้นทางหน้า|บริการหลัก)$/ }).getByRole("link", { name: "แจ้งซ่อม", exact: true }).filter({ visible: true }).first().click(); // … leaving asks first
-    await page.getByRole("alertdialog").getByRole("button", { name: "ทิ้งข้อมูล" }).click();
     await expect(page).not.toHaveURL(/\/repair\/new/);
   });
 
-  test("ยกเลิกการแจ้ง on the S04 dialog leaves the form after the discard confirm", async ({ page, baseURL }, info) => {
+  test("ยกเลิกการแจ้ง on the S04 dialog leaves the form after the leave confirm", async ({ page, baseURL }, info) => {
     test.slow(); // first visits compile on `next dev`
     const spot = tag(info);
     await page.goto("/repair/my");
@@ -105,8 +107,9 @@ test.describe("employee", () => {
     await attachPhoto(page);
     await report(await as("security_lead", baseURL), spot);
     await submitReady(page, "ยืนยันส่งแจ้งซ่อม");
+    // CR-057: the leave warning is the browser dialog; agree to discard.
+    page.once("dialog", (d) => { expect(d.message()).toBe(LEAVE_PAGE_MESSAGE); void d.accept(); });
     await page.getByRole("dialog", { name: "มีคนแจ้งเรื่องนี้ไว้แล้ว" }).getByRole("button", { name: "ยกเลิกการแจ้ง" }).click();
-    await page.getByRole("alertdialog").getByRole("button", { name: "ทิ้งข้อมูล" }).click();
     await expect(page).not.toHaveURL(/\/repair\/new/);
   });
 });

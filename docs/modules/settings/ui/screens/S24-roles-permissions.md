@@ -130,7 +130,7 @@ Desktop — tab "Role": `Card` + `Table`: Role (name + "role ระบบ" badge
 | Save dialog | title: บันทึกการเปลี่ยนสิทธิ์? · per role: **{role}** ({n} คน) — เพิ่ม: {labels} · ถอด: {labels} · footer: มีผลกับผู้ใช้ทันทีในการใช้งานครั้งถัดไป ไม่ต้องออกจากระบบ · buttons ยกเลิก · **บันทึก** |
 | Saved toast | บันทึกสิทธิ์แล้ว |
 | Conflict (`VERSION_CONFLICT`) | inline `Alert` warning in the dialog: สิทธิ์ถูกแก้โดย {ชื่อ} เมื่อ {เวลา} · button "โหลดข้อมูลล่าสุด" → reloads, re-applies your changes on top, closes the dialog, toast "โหลดข้อมูลล่าสุดแล้ว ตรวจการเปลี่ยนแปลงอีกครั้งก่อนบันทึก" |
-| Leave unsaved | `_common.md` §5 |
+| Leave unsaved | browser confirm (`_common.md` §5, CR-057) |
 | Add role button | เพิ่ม role |
 | Role dialog | title: เพิ่ม role / แก้ไข role · ชื่อ role * (≤ 50, placeholder: เช่น หัวหน้าช่าง) · คำอธิบาย (≤ 200, placeholder: role นี้ใช้กับใคร) · (add only) เริ่มต้นสิทธิ์: segmented "สิทธิ์พื้นฐานเท่านั้น" · "คัดลอกจาก role อื่น" → `Picker` "คัดลอกสิทธิ์จาก" * · buttons ยกเลิก · **เพิ่ม role** / **บันทึก** |
 | Role toasts | เพิ่ม role "{ชื่อ}" แล้ว · บันทึกแล้ว · ลบ role "{ชื่อ}" แล้ว |
@@ -153,7 +153,7 @@ Desktop — tab "Role": `Card` + `Table`: Role (name + "role ระบบ" badge
 
 - Click anywhere in a cell toggles it; Space toggles the focused checkbox; arrow keys move between cells inside a card (roving tabindex) — optional, Tab must work.
 - Toggling back to the original value removes the "changed" mark and lowers the count.
-- Switching tab with unsaved changes keeps them (same page); leaving the route asks (`_common.md` §5, also `beforeunload`).
+- Switching tab with unsaved changes keeps them (same page); leaving the route asks with the browser confirm, refresh / tab close with `beforeunload` (CR-057).
 - Mobile: changing the role in the Picker keeps pending changes of other roles; the save bar counts all of them.
 - After save the matrix reloads from the response (new `version`).
 

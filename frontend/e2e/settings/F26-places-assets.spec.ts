@@ -111,6 +111,7 @@ test.describe("admin", () => {
       await dialog.getByLabel("ชื่ออุปกรณ์").fill("ซ้ำ");
       await dialog.getByRole("button", { name: "เพิ่มอุปกรณ์" }).click();
       await expect(dialog.getByText("รหัสอุปกรณ์นี้มีอยู่แล้ว กรุณาใช้รหัสอื่น")).toBeVisible();
+      page.once("dialog", (d) => void d.accept()); // CR-057: closing with input asks first
       await dialog.getByRole("button", { name: "ยกเลิก" }).click();
 
       // move to the other room: same code, the 3D position cleared, the selection follows

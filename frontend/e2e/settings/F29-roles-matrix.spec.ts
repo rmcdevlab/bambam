@@ -1,5 +1,6 @@
 import path from "node:path";
 import { expect, request as playwrightRequest, test, type APIRequestContext, type Page } from "@playwright/test";
+import { LEAVE_PAGE_MESSAGE } from "../../src/components/shared/unsaved-messages";
 import stack from "../test-stack.cjs";
 import { addPersonToRole, removePerson } from "./people";
 import { confirmSave, saveMatrix, viewerWith } from "./sessions";
@@ -275,10 +276,10 @@ test.describe("desktop", () => {
     await page.getByRole("tab", { name: "ตารางสิทธิ์" }).click();
     await expect(page.getByText("เปลี่ยนสิทธิ์ 1 รายการ")).toBeVisible();
 
+    // CR-057: the leave warning is the browser dialog; cancel it to stay.
+    const asked = new Promise<string>((resolve) => page.once("dialog", (d) => { resolve(d.message()); void d.dismiss(); }));
     await page.getByRole("navigation", { name: "บริการหลัก" }).filter({ visible: true }).getByRole("link", { name: "หน้าแรก" }).click();
-    const leave = page.getByRole("alertdialog", { name: "ออกโดยไม่บันทึก?" });
-    await expect(leave.getByText("มีการเปลี่ยนแปลง 1 รายการที่ยังไม่บันทึก")).toBeVisible();
-    await leave.getByRole("button", { name: "อยู่ต่อ" }).click();
+    expect(await asked).toBe(LEAVE_PAGE_MESSAGE);
     await expect(page).toHaveURL(/\/settings\/roles/);
 
     await page.getByRole("button", { name: "ยกเลิกการเปลี่ยนแปลง" }).click();

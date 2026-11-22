@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useConfirm } from "@/components/shared/confirm-action";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { changeUserRole, guardRule } from "../../api";
@@ -82,7 +83,7 @@ export function ChangeRoleDialog({ user, roles, onOpenChange, onChanged, onRoles
   }
 
   return (
-    <Dialog open={!!user} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={!!user} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={cn(sheetOnMobile, "lg:max-w-xl data-[size=default]:lg:max-w-xl")}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">เปลี่ยน Role</DialogTitle>
@@ -155,9 +156,9 @@ export function ChangeRoleDialog({ user, roles, onOpenChange, onChanged, onRoles
           </div>
         )}
         <DialogFooter className="-mx-5 -mb-5 px-5">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+          <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>
             ยกเลิก
-          </Button>
+          </Button></DialogClose>
           <Button type="button" disabled={!changed || busy} onClick={confirm}>
             {busy && <Loader2 className="animate-spin" aria-hidden />}
             ยืนยันเปลี่ยน Role
@@ -165,6 +166,6 @@ export function ChangeRoleDialog({ user, roles, onOpenChange, onChanged, onRoles
         </DialogFooter>
         {askDialog}
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

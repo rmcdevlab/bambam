@@ -3,10 +3,10 @@
 /* eslint-disable @next/next/no-img-element -- Authenticated API paths and blob previews require plain images (HANDOFF). */
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AlertCircle, Camera, HardHat, Loader2, Send, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/shared/confirm-action";
+import { useUnsavedGuard } from "@/components/shared/use-unsaved-guard";
 import { PageHeader } from "@/components/shared/page-header";
 import { ForbiddenState } from "@/components/shared/states";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,22 +32,24 @@ import { useTicket } from "./use-ticket";
 export const RESOLVED_TOAST = "ส่งผลแล้ว รอผู้แจ้งตรวจรับ";
 
 export function ResolveScreen({ id }: { id: string }) {
-  const router = useRouter();
   const { ticket, loading, error, reload } = useTicket(id);
+  // CR-057: leaving the page with typed text, photos or a rating asks with the browser dialog.
+  const [dirty, setDirty] = useState(false);
+  const guard = useUnsavedGuard(dirty);
   const rework = ticket?.step === "reworking";
   return <>
     <PageHeader title={rework ? "บันทึกผลการแก้ไข" : "บันทึกผลซ่อม"} variant="bar" backHref={ticketHref(id)} />
     {loading ? <TicketSkeleton /> : error ? <TicketFailure error={error} onRetry={reload} /> : ticket && (ticket.allowedActions.includes("resolve")
       ? <div className="mx-auto max-w-170 px-3 py-4 sm:px-4 lg:px-0 lg:py-0"><div className="rounded-xl border bg-card p-4 shadow-card sm:p-6">
         <p className="mb-1 text-xs text-muted-foreground">{ticket.ticketNo}</p><h2 className="mb-3 text-lg font-semibold">{ticketTitle(ticket)}</h2>
-        <ResolveFields ticket={ticket} onDone={() => { toast.success(RESOLVED_TOAST); router.replace(ticketHref(ticket.id)); }} cancel={<Button asChild variant="outline" className="h-12"><Link href={ticketHref(ticket.id)}>ยกเลิก</Link></Button>} />
+        <ResolveFields ticket={ticket} onDirtyChange={setDirty} onDone={() => { toast.success(RESOLVED_TOAST); guard.finish(ticketHref(ticket.id)); }} cancel={<Button asChild variant="outline" className="h-12"><Link href={ticketHref(ticket.id)}>ยกเลิก</Link></Button>} />
       </div></div>
       : <ForbiddenState title="บันทึกผลงานนี้ไม่ได้ตอนนี้" reason={ticket.blockedActions.resolve ? "กดเริ่มดำเนินการ (กำหนดวันที่คาดว่าจะเสร็จ และผู้ดำเนินการซ่อม) ก่อนบันทึกผล" : "งานนี้ไม่ได้อยู่ระหว่างซ่อม หรือคุณไม่ใช่ช่าง"} />)}
   </>;
 }
 
 /** The S10 fields + submit, shared by the sheet (ticket-actions) and the page. */
-export function ResolveFields({ ticket, onDone, cancel, onStale }: { ticket: TicketDetail; onDone: (t: TicketDetail) => void; cancel: React.ReactNode; onStale?: () => void }) {
+export function ResolveFields({ ticket, onDone, cancel, onStale, onDirtyChange }: { ticket: TicketDetail; onDone: (t: TicketDetail) => void; cancel: React.ReactNode; onStale?: () => void; onDirtyChange?: (dirty: boolean) => void }) {
   const contractorJob = ticket.workBy === "contractor";
   const alreadyRated = !!ticket.result?.contractorRating;
   const camera = useRef<HTMLInputElement>(null);
@@ -65,6 +67,8 @@ export function ResolveFields({ ticket, onDone, cancel, onStale }: { ticket: Tic
   const [opened, setOpened] = useState<string | null>(null);
   const uploads = usePhotoList(photos, (next) => { setPhotos(next); setErrors((e) => { const x = { ...e }; delete x.photoIds; return x; }); }, busy);
   const before = ticket.photos[0];
+  const dirty = !!note.trim() || photos.length > 0 || rating > 0 || !!comment.trim();
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
 
   function validate() {
     const e: Record<string, string> = {};

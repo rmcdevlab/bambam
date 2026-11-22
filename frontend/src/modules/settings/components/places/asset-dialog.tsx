@@ -5,7 +5,8 @@ import { Info, Loader2, Plus, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { AssetIcon } from "@/components/shared/asset-icon";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -172,7 +173,7 @@ export function AssetDialog({ target, tree, types, onOpenChange, onSaved, onType
   const codeLocked = !!editing && editing.labelStatus !== "never";
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !busy && !typeBusy && onOpenChange(o)}>
+    <FormDialog open={!!target} onOpenChange={(o) => !busy && !typeBusy && onOpenChange(o)}>
       <DialogContent className={cn(sheetOnMobile, "lg:max-w-xl data-[size=default]:lg:max-w-xl")}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{editing ? "แก้ไขอุปกรณ์" : "เพิ่มอุปกรณ์"}</DialogTitle>
@@ -311,7 +312,7 @@ export function AssetDialog({ target, tree, types, onOpenChange, onSaved, onType
             <Input id="asset-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น แอร์ห้องประชุม 1A ตัวซ้าย" className="h-11" />
           </div>
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy || typeBusy || !!conflict}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {editing ? "บันทึก" : "เพิ่มอุปกรณ์"}
@@ -319,6 +320,6 @@ export function AssetDialog({ target, tree, types, onOpenChange, onSaved, onType
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

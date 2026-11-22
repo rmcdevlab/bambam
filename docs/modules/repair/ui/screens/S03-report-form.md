@@ -146,7 +146,7 @@ Desktop (≥1024px) (CR-002): sidebar + top bar (title "แจ้งซ่อม
 | Summary panel | `Card` sticky + `Progress` + checklist (CR-002) | desktop only; bottom bar below `xl` |
 | Team handled | `Card` + `Switch` + `Textarea` + `PhotoPicker` | only `housekeeper_lead`, `security_lead` (BR-F04-1) |
 | QR banner | `Alert` default with `QrCode` icon + `Button` link | |
-| Leave confirm | `AlertDialog` discard (`_common.md` §7) | |
+| Leave confirm | browser confirm (`_common.md` §7, CR-057) | |
 | Submit | `Button` variant `brand` (normal) / default (team handled), sticky bottom (mobile) | spinner + disabled while sending |
 | Duplicates | S04 (Sheet / Dialog) | |
 
@@ -191,7 +191,7 @@ Desktop (≥1024px) (CR-002): sidebar + top bar (title "แจ้งซ่อม
 - **Category change** clears symptoms that do not belong to the new category.
 - **Building change** clears ชั้น.
 - **QR prefill (F13-B):** with `?asset` found → prefill หมวดงาน, อาคาร, ชั้น, จุดที่เกิด; all editable (BR-F13B-2); open at step 1 with symptoms to pick. "ไม่ใช่อุปกรณ์นี้" removes the asset link and banner but keeps the field values. The asset code survives the login redirect (F13-B) because it is part of the URL.
-- **Leaving with any data entered** (back on step 1, ✕, browser back, nav) → discard dialog. Nothing entered → leave silently.
+- **Leaving with any data entered** (back on step 1, ✕, browser back, nav) → browser leave confirm (CR-057); agreeing drops the draft. Nothing entered → leave silently.
 - **Submit:** validates all steps (mobile: jumps to the first step with an error). Then sends; the server runs the duplicate check (F03) first:
   - duplicates → open S04 with the list; nothing created yet
   - none → create → S05
@@ -218,7 +218,7 @@ Desktop (≥1024px) (CR-002): sidebar + top bar (title "แจ้งซ่อม
 - [ ] Per-step validation on mobile, full validation on submit, exact messages
 - [ ] Team-handled card renders only for `housekeeper_lead` / `security_lead`
 - [ ] QR found / not found / "ไม่ใช่อุปกรณ์นี้" behave as above
-- [ ] Discard dialog appears only when data was entered
+- [ ] Leave confirm (browser, CR-057) appears only when data was entered
 - [ ] Submit keeps all data on failure; photo upload errors stay per tile
 - [ ] Keyboard and screen-reader basics (radio cards and chips reachable by keyboard, labels, error text linked with `aria-describedby`)
 - [ ] Works with mocks (`NEXT_PUBLIC_USE_MOCKS=true`), including a mock that returns duplicates and one asset code that is not found

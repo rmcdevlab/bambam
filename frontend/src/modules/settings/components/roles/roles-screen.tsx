@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, Info, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useIsDesktop } from "@/components/shared/use-media-query";
-import { useDiscardGuard } from "@/components/shared/use-discard-guard";
+import { useUnsavedGuard } from "@/components/shared/use-unsaved-guard";
 import { ErrorState } from "@/components/shared/states";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -57,7 +57,8 @@ export function RolesScreen() {
   const [deleting, setDeleting] = useState<Role | null>(null);
 
   const count = Object.keys(pending).length;
-  const guard = useDiscardGuard(count > 0);
+  // CR-057: leaving with pending changes asks with the browser dialog.
+  useUnsavedGuard(count > 0);
 
   useEffect(() => {
     let active = true;
@@ -340,21 +341,6 @@ export function RolesScreen() {
           }
         }}
       />
-
-      <AlertDialog open={guard.open} onOpenChange={guard.setOpen}>
-        <AlertDialogContent className={sheetOnMobile}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>ออกโดยไม่บันทึก?</AlertDialogTitle>
-            <AlertDialogDescription>มีการเปลี่ยนแปลง {count} รายการที่ยังไม่บันทึก</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>อยู่ต่อ</AlertDialogCancel>
-            <Button variant="destructive" onClick={guard.discard}>
-              ออกโดยไม่บันทึก
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

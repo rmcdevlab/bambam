@@ -7,7 +7,8 @@ import { CATEGORY_ICONS } from "@/components/shared/category-icon";
 import { PRIORITY_LABEL } from "@/components/shared/priority-indicator";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { createCategory, createSymptom, updateCategory, updateSymptom } from "../../api";
@@ -124,7 +125,7 @@ export function CategoryDialog({ target, onOpenChange, onSaved, fetchFresh, buil
   }
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={cn(sheetOnMobile, "lg:max-w-xl data-[size=default]:lg:max-w-xl")}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{editing ? "แก้ไขหมวดงาน" : "เพิ่มหมวดงาน"}</DialogTitle>
@@ -181,7 +182,7 @@ export function CategoryDialog({ target, onOpenChange, onSaved, fetchFresh, buil
             )}
           </fieldset>
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy || !!conflict}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {editing ? "บันทึก" : "เพิ่มหมวดงาน"}
@@ -189,7 +190,7 @@ export function CategoryDialog({ target, onOpenChange, onSaved, fetchFresh, buil
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
@@ -254,7 +255,7 @@ export function SymptomDialog({ category, symptom, open, onOpenChange, onSaved, 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={sheetOnMobile}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{symptom ? "แก้ไขอาการ" : "เพิ่มอาการ"}</DialogTitle>
@@ -274,7 +275,7 @@ export function SymptomDialog({ category, symptom, open, onOpenChange, onSaved, 
             <p className="text-xs text-muted-foreground">งานจะได้ระดับสูงสุดของอาการที่เลือก · ใช้กับการแจ้งงานใหม่</p>
           </div>
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy || !!conflict}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {symptom ? "บันทึก" : "เพิ่มอาการ"}
@@ -282,6 +283,6 @@ export function SymptomDialog({ category, symptom, open, onOpenChange, onSaved, 
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

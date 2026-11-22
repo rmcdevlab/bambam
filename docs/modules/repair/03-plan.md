@@ -821,6 +821,16 @@ Status: done — accepted 2026-11-02 (prepare + wire in one session, UI by Claud
 
 ---
 
+## Stage CR-057 — unsaved-changes warning: browser dialog on every form (CR-057)
+
+Rework after accepted stages (repair + settings + shared UI). Spec: `changes/CR-057.md`.
+
+- [x] Shared `useUnsavedGuard` (page) + `FormDialog` (dialog): `window.confirm` / `beforeunload`, one wording
+- [x] S03, S24: custom leave dialogs removed; S10 page guarded
+- [x] Every form dialog with input (repair + settings) uses `FormDialog`; ยกเลิก goes through the guard
+- [x] e2e updated for the browser dialog
+- [x] Owner accepted 2026-11-22 (`repair-cr-057`). Full e2e on the test stack still to run (PROGRESS open issue)
+
 ## Decisions recorded with this plan (DECISIONS.md)
 
 - D-021 IDs are UUIDs (not guessable in URLs; tickets are shown by `ticketNo`)

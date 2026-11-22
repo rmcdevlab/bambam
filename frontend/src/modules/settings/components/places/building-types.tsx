@@ -16,7 +16,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -243,7 +244,7 @@ export function BuildingTypeDialog({ target, onOpenChange, onSaved, fetchFresh }
   }
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={sheetOnMobile}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{creating ? "เพิ่มประเภทอาคาร" : "แก้ไขชื่อประเภทอาคาร"}</DialogTitle>
@@ -280,7 +281,7 @@ export function BuildingTypeDialog({ target, onOpenChange, onSaved, fetchFresh }
             </fieldset>
           )}
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy || !!conflict || (creating && !categories)}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {creating ? "เพิ่มประเภทอาคาร" : "บันทึก"}
@@ -288,6 +289,6 @@ export function BuildingTypeDialog({ target, onOpenChange, onSaved, fetchFresh }
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

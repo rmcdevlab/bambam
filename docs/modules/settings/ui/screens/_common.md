@@ -51,7 +51,7 @@ Group labels: Small, uppercase-free, muted. Active item = section of the current
 
 **Drawer** (< 1024px): the same sidebar slides in from the left over a dim overlay, with a close button (`X`, aria-label "ปิดเมนู") beside the logo. Focus moves into the drawer, Tab is trapped, Escape / overlay click / navigation closes it and focus returns to the menu button; the page behind is `inert`.
 
-**Unsaved changes guard** (S24): navigating via the sidebar with pending matrix changes asks first (§5).
+**Unsaved changes guard** (S24): navigating via the sidebar with pending matrix changes asks first with the browser confirm (CR-057). Every form dialog with input asks before closing (CR-057, repair `_common.md` §7).
 
 ## 3. Labels (use exactly)
 
@@ -108,7 +108,7 @@ All `AlertDialog`; bottom `Sheet` on mobile.
 | Deactivate | ปิดใช้งาน "{ชื่อ}"? | {ชนิด}นี้จะไม่แสดงในตัวเลือกใหม่ งานเดิมยังแสดงชื่อนี้ เปิดใช้งานกลับได้ภายหลัง (+ per-screen extra line) | ยกเลิก · **ปิดใช้งาน** |
 | Activate | — (no dialog; acts at once) | | toast เปิดใช้งาน "{ชื่อ}" แล้ว |
 | Delete | ลบ "{ชื่อ}"? | ลบถาวร กู้คืนไม่ได้ | ยกเลิก · **ลบ** (destructive) |
-| Leave with unsaved changes (S24) | ออกโดยไม่บันทึก? | มีการเปลี่ยนแปลง {n} รายการที่ยังไม่บันทึก | อยู่ต่อ · **ออกโดยไม่บันทึก** (destructive) |
+| ~~Leave with unsaved changes (S24)~~ (replaced, CR-057) | browser `window.confirm`: ข้อมูลที่กรอกไว้ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่? | — | the browser's OK / Cancel |
 
 Success toasts: เพิ่ม{ชนิด}แล้ว · บันทึกแล้ว · ปิดใช้งาน "{ชื่อ}" แล้ว · เปิดใช้งาน "{ชื่อ}" แล้ว · ลบ "{ชื่อ}" แล้ว · บันทึกลำดับแล้ว
 

@@ -172,7 +172,7 @@ All use `AlertDialog` (destructive or irreversible) or `Dialog`, become a bottom
 | Close ticket (ปิดงาน, F08-B) | S07, S11 | ปิดงาน {ticket_no}? | งานจะปิดทันทีโดยไม่ต้องรอตรวจรับ ผู้แจ้ง ผู้ติดตาม และช่างจะเห็นสถานะปิดแล้วในหน้างาน (CR-024) | เหตุผลที่ปิดงาน * (Textarea, max 500) — error: กรุณาใส่เหตุผล | ยกเลิก · **ปิดงาน** (destructive) |
 | ~~Change priority (F22)~~ (removed, CR-015) | S07, S11 | เปลี่ยนความเร่งด่วนเป็น "{ระดับ}"? | ถ้างานนี้ถูกเลื่อนลำดับไว้ จะกลับไปเรียงตามความเร่งด่วนอัตโนมัติ | — | ยกเลิก · **เปลี่ยน** |
 | Claim (รับงาน, F21) | S07, S09 | รับงานนี้? | {title} · {location} — คุณถืองานได้ทีละ 1 งาน ต้องบันทึกผลหรือคืนงานก่อนรับงานใหม่ | — | ยกเลิก · **รับงาน** |
-| Discard form | S03, S10 | ทิ้งข้อมูลที่กรอกไว้? | ข้อมูลและรูปที่แนบในหน้านี้จะหายไป | — | กรอกต่อ · **ทิ้งข้อมูล** (destructive) |
+| ~~Discard form~~ (replaced, CR-057) | S03, S10 | ~~ทิ้งข้อมูลที่กรอกไว้?~~ | — | — | Leaving a form with input asks with the browser `window.confirm` "ข้อมูลที่กรอกไว้ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?" (refresh / tab close: the browser's own leave dialog) (CR-057). Every form dialog with input asks "ข้อมูลที่กรอกไว้ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้หรือไม่?" on close. One rule for every form and role: `components/shared/use-unsaved-guard.ts`, `form-dialog.tsx` |
 
 Success toasts: คืนงานแล้ว · ส่งต่อให้ช่างแล้ว · ปิดงานแล้ว · เปลี่ยนความเร่งด่วนแล้ว · รับงานแล้ว
 

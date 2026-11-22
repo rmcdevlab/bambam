@@ -9,7 +9,8 @@ import { useCurrentUser } from "@/components/shared/me-provider";
 import { Picker } from "@/components/shared/picker";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -182,7 +183,7 @@ function AssessDialog({ ticket, open, onOpenChange, onDone, reaccept }: DialogPr
   const title = first ? "เริ่มดำเนินการ" : reaccept ? "รับแก้ไขและกำหนดวันเสร็จใหม่" : "เลื่อนวันที่คาดว่าจะเสร็จ";
   // The contractor form is a sibling of this dialog (not inside its <form>): submit events bubble through portals.
   return <>
-    <Dialog open={open} onOpenChange={(o) => { if (o) { setChip(""); setPicked(""); setReason(""); setWorkBy(ticket.workBy ?? "in_house"); setContractorId(ticket.contractor?.id ?? ""); setAssigneeId(""); setTechnicians(undefined); setErrors({}); } onOpenChange(o); }}>
+    <FormDialog open={open} onOpenChange={(o) => { if (o) { setChip(""); setPicked(""); setReason(""); setWorkBy(ticket.workBy ?? "in_house"); setContractorId(ticket.contractor?.id ?? ""); setAssigneeId(""); setTechnicians(undefined); setErrors({}); } onOpenChange(o); }}>
       <DialogContent className={sheetLike}>
         <form onSubmit={submit} noValidate className="space-y-5">
           <DialogHeader><DialogTitle className="text-lg">{title}</DialogTitle>
@@ -227,12 +228,12 @@ function AssessDialog({ ticket, open, onOpenChange, onDone, reaccept }: DialogPr
               : <span className="text-xs font-normal text-muted-foreground">ไม่บังคับ · ผู้แจ้งเห็นข้อความนี้</span>}</label>
             <Input id="assess-reason" value={reason} onChange={(e) => { setReason(e.target.value); clear("reason"); }} maxLength={100} placeholder="เช่น รออะไหล่" aria-invalid={!!errors.reason} aria-describedby="reason-error" className="h-12 rounded-sm bg-card text-base" />
             <FieldError id="reason-error" message={errors.reason} /></div>}
-          <DialogFooter className="gap-2"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>ยกเลิก</Button>
+          <DialogFooter className="gap-2"><DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" aria-hidden />}{first ? "เริ่มดำเนินการ" : "บันทึกวันใหม่"}</Button></DialogFooter>
         </form>
         {confirmDialog}
       </DialogContent>
-    </Dialog>
+    </FormDialog>
     <ContractorFormDialog open={adding} onOpenChange={setAdding} onSaved={(c) => {
       setAdding(false); setContractors((old) => [c, ...(old ?? [])]); setContractorId(c.id); clear("contractorId"); toast.success("เพิ่มช่างภายนอกแล้ว");
     }} onPickExisting={(c) => {
@@ -245,14 +246,14 @@ function AssessDialog({ ticket, open, onOpenChange, onDone, reaccept }: DialogPr
 
 function ResolveDialog({ ticket, open, onOpenChange, onDone }: DialogProps) {
   const rework = ticket.step === "reworking";
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  return <FormDialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className={sheetLike}>
       <DialogHeader><DialogTitle className="text-lg">{rework ? "บันทึกผลการแก้ไข" : "บันทึกผลซ่อม"}</DialogTitle>
         <DialogDescription>ผู้แจ้งจะเห็นรูปหลังซ่อมต่อจากรูปก่อนซ่อม แล้วประเมินตรวจงานเพื่อปิดงาน</DialogDescription></DialogHeader>
       {open && <ResolveFields ticket={ticket} onDone={onDone} onStale={() => onOpenChange(false)}
-        cancel={<Button type="button" variant="outline" className="h-12" onClick={() => onOpenChange(false)}>ยกเลิก</Button>} />}
+        cancel={<DialogClose asChild><Button type="button" variant="outline" className="h-12">ยกเลิก</Button></DialogClose>} />}
     </DialogContent>
-  </Dialog>;
+  </FormDialog>;
 }
 
 // ---- S08 ประเมินงานซ่อม (CR-012): stars start empty or at the star tapped on S07 (BR-F07-7); only the button submits ----
@@ -280,7 +281,7 @@ function ConfirmDialog({ ticket, open, initial, onOpenChange, onDone, onSendBack
     finally { setBusy(false); }
   }
   const place = ticketLocation(ticket);
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  return <FormDialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className={cn(sheetLike, "sm:max-w-120")}>
       <form onSubmit={submit} noValidate>
         <DialogHeader><DialogTitle className="text-lg">ประเมินงานซ่อม</DialogTitle>
@@ -318,7 +319,7 @@ function ConfirmDialog({ ticket, open, initial, onOpenChange, onDone, onSendBack
       </form>
       {confirmDialog}
     </DialogContent>
-  </Dialog>;
+  </FormDialog>;
 }
 
 /** 1–5 radio group with a roving tab stop (arrows / Home / End). Never preselected (BR-F07-7). */
@@ -375,7 +376,7 @@ function SendBackDialog({ ticket, open, onOpenChange, onDone }: DialogProps) {
     finally { setBusy(false); }
   }
   const tech = ticket.technician?.name;
-  return <Dialog open={open} onOpenChange={(o) => { if (o) { setReason(""); setErrors({}); } onOpenChange(o); }}>
+  return <FormDialog open={open} onOpenChange={(o) => { if (o) { setReason(""); setErrors({}); } onOpenChange(o); }}>
     <DialogContent className={sheetLike}>
       <form onSubmit={submit} noValidate className="space-y-4">
         <DialogHeader><DialogTitle className="text-lg">ส่งกลับให้ช่างแก้ไข</DialogTitle>
@@ -386,12 +387,12 @@ function SendBackDialog({ ticket, open, onOpenChange, onDone }: DialogProps) {
         <div className="space-y-2"><p className="text-[15px] font-semibold">รูปประกอบ <span className="text-xs font-normal text-muted-foreground">ไม่บังคับ</span></p>
           <PhotoPicker value={photos} onChange={setPhotos} disabled={busy} invalid={!!errors.photoIds} />
           <FieldError id="photoIds-error" message={errors.photoIds} /></div>
-        <DialogFooter className="gap-2"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>ยกเลิก</Button>
+        <DialogFooter className="gap-2"><DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
           <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" aria-hidden />}{sending || "ส่งกลับให้แก้"}</Button></DialogFooter>
       </form>
       {confirmDialog}
     </DialogContent>
-  </Dialog>;
+  </FormDialog>;
 }
 
 // ---- ปิดงาน (F08-B, _common.md §7) — admin, from S07 and S11 ----
@@ -420,7 +421,7 @@ export function HandoverDialog({ ticket, open, onOpenChange, onDone, onStale }: 
       else { toast.error(errorMessage(err)); if (errorCode(err) === "NOT_TEAM_HANDLED") onStale(); }
     } finally { sending.current = false; setBusy(false); }
   }
-  return <Dialog open={open} onOpenChange={value => { if (!sending.current) onOpenChange(value); }}>
+  return <FormDialog open={open} onOpenChange={value => { if (!sending.current) onOpenChange(value); }}>
     <DialogContent className={sheetLike}>
       <form onSubmit={submit} noValidate className="space-y-4">
         <DialogHeader><DialogTitle>ส่งต่องานนี้ให้ช่าง?</DialogTitle><DialogDescription>งานเดิม เลขเดิม จะส่งกลับไปที่ช่าง รอช่างกำหนดวันเสร็จ</DialogDescription></DialogHeader>
@@ -431,11 +432,11 @@ export function HandoverDialog({ ticket, open, onOpenChange, onDone, onStale }: 
             placeholder="เช่น ทีมเช็ดแล้วแต่ยังมีน้ำซึมจากฝ้า" aria-invalid={!!error} aria-describedby="handover-reason-error" />
           <FieldError id="handover-reason-error" message={error} />
         </div>
-        <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+        <DialogFooter><DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
           <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" aria-hidden />}ส่งต่อให้ช่าง</Button></DialogFooter>
       </form>
     </DialogContent>
-  </Dialog>;
+  </FormDialog>;
 }
 
 /** Admin closes any open ticket with a reason (1–500). Stale ticket (already closed) → toast + close the dialog. */
@@ -455,7 +456,7 @@ export function CloseTicketDialog({ ticket, open, onOpenChange, onDone }: { tick
       else { toast.error(errorMessage(err)); if (errorCode(err) === "TICKET_CLOSED") onOpenChange(false); }
     } finally { setBusy(false); }
   }
-  return <Dialog open={open} onOpenChange={(o) => { if (o) { setReason(""); setError(""); } if (!busy) onOpenChange(o); }}>
+  return <FormDialog open={open} onOpenChange={(o) => { if (o) { setReason(""); setError(""); } if (!busy) onOpenChange(o); }}>
     <DialogContent className={sheetLike}>
       <form onSubmit={submit} noValidate className="space-y-4">
         <DialogHeader><DialogTitle className="text-lg">ปิดงาน {ticket.ticketNo}?</DialogTitle>
@@ -464,9 +465,9 @@ export function CloseTicketDialog({ ticket, open, onOpenChange, onDone }: { tick
           <Textarea id="close-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={3} placeholder="เช่น ส่งเรื่องเปลี่ยนเครื่องใหม่ผ่านฝ่ายจัดซื้อแล้ว"
             aria-invalid={!!error} aria-describedby="close-reason-error" className="rounded-sm bg-card px-3.5 py-2.5 text-base" />
           <FieldError id="close-reason-error" message={error} /></div>
-        <DialogFooter className="gap-2"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>ยกเลิก</Button>
+        <DialogFooter className="gap-2"><DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
           <Button type="submit" variant="destructive" disabled={busy}>{busy && <Loader2 className="animate-spin" aria-hidden />}ปิดงาน</Button></DialogFooter>
       </form>
     </DialogContent>
-  </Dialog>;
+  </FormDialog>;
 }

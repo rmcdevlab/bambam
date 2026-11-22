@@ -96,6 +96,7 @@ test("AC3 + AC4: add by form, duplicate code refused, deactivate keeps the code 
   await pick(page, dialog, "ห้อง", "Call center 2");
   await dialog.getByRole("button", { name: "บันทึก" }).click();
   await expect(dialog.getByText("รหัสนี้มีอุปกรณ์อื่นใช้แล้ว")).toBeVisible();
+  page.once("dialog", (d) => void d.accept()); // CR-057: closing with input asks first
   await dialog.getByRole("button", { name: "ยกเลิก" }).click();
 
   // deactivate

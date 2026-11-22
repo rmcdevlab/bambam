@@ -15,7 +15,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime } from "@/lib/format";
@@ -126,7 +127,7 @@ export function RoleFormDialog({ role, roles, copyable, open, onOpenChange, onSa
 
   const title = role ? "แก้ไข Role" : "เพิ่ม Role";
   return (
-    <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={sheetOnMobile}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{title}</DialogTitle>
@@ -181,9 +182,9 @@ export function RoleFormDialog({ role, roles, copyable, open, onOpenChange, onSa
             </Field>
           )}
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>
               ยกเลิก
-            </Button>
+            </Button></DialogClose>
             <Button type="submit" disabled={busy}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {role ? "บันทึก" : "เพิ่ม Role"}
@@ -191,7 +192,7 @@ export function RoleFormDialog({ role, roles, copyable, open, onOpenChange, onSa
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 

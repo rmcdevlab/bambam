@@ -5,7 +5,8 @@ import { Loader2, MoreHorizontal, Pencil, Plus, Power, Search, Trash2 } from "lu
 import { toast } from "sonner";
 import { EmptyState, ErrorState, ForbiddenState } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -244,7 +245,7 @@ function TypeDialog({ target, onOpenChange, onSaved, fetchFresh }: {
   }
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={sheetOnMobile}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{editing ? "แก้ไขประเภท" : "เพิ่มประเภท"}</DialogTitle>
@@ -259,7 +260,7 @@ function TypeDialog({ target, onOpenChange, onSaved, fetchFresh }: {
             <p id="ctype-hint" className="text-xs text-muted-foreground">ชื่อซ้ำไม่ได้ (ไม่สนตัวพิมพ์เล็ก-ใหญ่)</p>
           </div>
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy || !!conflict}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {editing ? "บันทึก" : "เพิ่มประเภท"}
@@ -267,6 +268,6 @@ function TypeDialog({ target, onOpenChange, onSaved, fetchFresh }: {
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

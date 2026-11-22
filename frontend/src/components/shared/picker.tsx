@@ -196,7 +196,7 @@ function OptionList({ listId, options, value, onPick, searchable, size, label, s
   return <div className="flex min-h-0 flex-1 flex-col">
     {searchable && <div className="relative mb-1.5 shrink-0">
       <Search aria-hidden className="pointer-events-none absolute top-3.5 left-3.5 size-4 text-muted-foreground" />
-      <input type="text" role="combobox" aria-expanded aria-controls={listId} aria-autocomplete="list" aria-activedescendant={filtered.length ? optionId(current) : undefined}
+      <input type="text" role="combobox" data-guard-skip aria-expanded aria-controls={listId} aria-autocomplete="list" aria-activedescendant={filtered.length ? optionId(current) : undefined}
         aria-label={searchPlaceholder ?? label} placeholder={searchPlaceholder} value={query} autoFocus={size === "menu"}
         onChange={(e) => { setQuery(e.target.value); setActive(0); setPage(0); }} onKeyDown={onKeyDown}
         className="h-11 w-full rounded-sm border border-input bg-card pr-3 pl-10 text-base outline-none focus:border-ring focus:ring-3 focus:ring-ring/20" />

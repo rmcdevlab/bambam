@@ -33,6 +33,7 @@ test.describe("super_admin", () => {
       await dialog.getByLabel("ชื่อประเภท").fill(` ${name} `);
       await dialog.getByRole("button", { name: "เพิ่มประเภท" }).click();
       await expect(dialog.getByText("ชื่อนี้มีอยู่แล้ว")).toBeVisible();
+      page.once("dialog", (d) => void d.accept()); // CR-057: closing with input asks first
       await dialog.getByRole("button", { name: "ยกเลิก" }).click();
 
       // deactivate

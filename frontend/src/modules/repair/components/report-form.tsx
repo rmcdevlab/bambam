@@ -36,7 +36,7 @@ import { CategoryTile, categoryIcon } from "./category-icon";
 import { forgetUploads, keptPhoto, photoBlocker, PhotoListLightbox, PhotoPicker, PhotoTile, uploadKeptPhotos, usePhotoList, type PhotoItem } from "./photo-picker";
 import { RoomPlanPicker } from "./room-plan-picker";
 import { floorLabel, listDate, timeOf } from "./ticket-presentation";
-import { useDiscardGuard } from "@/components/shared/use-discard-guard";
+import { useUnsavedGuard } from "@/components/shared/use-unsaved-guard";
 import { useConfirm } from "@/components/shared/confirm-action";
 
 // S03 แจ้งซ่อมใหม่ — CR-014 wizard (docs/modules/repair/ui/screens/S03-report-form.md CR-014 block, visual
@@ -231,7 +231,8 @@ function ReportFormBody({ team, canTeam, asset }: { team: boolean; canTeam: bool
   const frame = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const dirty = isDirty(values, photos) || teamPhotos.length > 0;
-  const guard = useDiscardGuard(dirty);
+  // CR-057: leaving with input asks with the browser dialog; agreeing drops the stored draft.
+  const guard = useUnsavedGuard(dirty, () => dropDraft());
   const roomKey = JSON.stringify([values.categoryId, values.floorId, values.roomId]);
   const duplicateKey = JSON.stringify([roomKey, values.locationDetail]);
   // The card stays while the spot is being typed (no flicker); only the check for the current spot can block.
@@ -568,11 +569,10 @@ function ReportFormBody({ team, canTeam, asset }: { team: boolean; canTeam: bool
       <p className="mt-0.5 text-sm leading-6 text-primary-foreground/88">{team ? "บันทึกปัญหาที่ทีมแก้ไขแล้ว พร้อมหลักฐานก่อนและหลังดำเนินการ งานจะปิดทันที ไม่ส่งถึงช่าง" : "กรอกทีละขั้น แล้วตรวจข้อมูลก่อนส่งให้ช่าง"} <span className="whitespace-nowrap">· ช่องที่มี <span className="rounded-[4px] bg-card px-1 font-semibold text-destructive">*</span> จำเป็นต้องกรอก</span></p>
     </MascotPanel>
   </header>;
-  const discard = <AlertDialog open={guard.open} onOpenChange={guard.setOpen}><AlertDialogContent className="top-auto bottom-0 w-full max-w-none translate-y-0 rounded-b-none rounded-t-xl lg:top-1/2 lg:bottom-auto lg:max-w-lg lg:-translate-y-1/2 lg:rounded-xl"><AlertDialogHeader><AlertDialogTitle>ทิ้งข้อมูลที่กรอกไว้?</AlertDialogTitle><AlertDialogDescription>ข้อมูลและรูปที่แนบในหน้านี้จะหายไป</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>กรอกต่อ</AlertDialogCancel><Button variant="destructive" onClick={() => { dropDraft(); guard.discard(); }}>ทิ้งข้อมูล</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>;
 
-  if (masterError && !master) return <>{header}<ErrorState onRetry={() => { setMasterError(false); setRevision((r) => r + 1); }} />{discard}</>;
+  if (masterError && !master) return <>{header}<ErrorState onRetry={() => { setMasterError(false); setRevision((r) => r + 1); }} /></>;
   if (!master) return <>{header}<FormSkeleton /></>;
-  if (!categories.length) return <>{header}<ForbiddenState title="ยังไม่มีหมวดงานในระบบ ติดต่อ Admin" />{discard}</>;
+  if (!categories.length) return <>{header}<ForbiddenState title="ยังไม่มีหมวดงานในระบบ ติดต่อ Admin" /></>;
 
   const panel = (key: StepKey, content: ReactNode) => {
     const on = step === key;
@@ -674,7 +674,6 @@ function ReportFormBody({ team, canTeam, asset }: { team: boolean; canTeam: bool
       <div className="h-4 lg:hidden" aria-hidden />
     </form>
     <AlertDialog open={resetOpen} onOpenChange={setResetOpen}><AlertDialogContent className="rounded-xl"><AlertDialogHeader><AlertDialogTitle>ล้างข้อมูลในแบบฟอร์ม?</AlertDialogTitle><AlertDialogDescription>ข้อมูลที่กรอกและรูปที่เลือกจะถูกล้าง</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>เก็บไว้ก่อน</AlertDialogCancel><Button onClick={resetForm}>ล้างแบบฟอร์ม</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
-    {discard}
     {confirmDialog}
     <DuplicateDialog {...duplicateProps} open={duplicateDialog !== null} tickets={duplicateDialog ?? []} onOpenChange={open => { if (!open) setDuplicateDialog(null); }}
       onCancel={() => guard.leaveBack()} submitLabel={team ? "ยืนยันบันทึกงานทีม" : "ยืนยันส่งแจ้งซ่อม"}

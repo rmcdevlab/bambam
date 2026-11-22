@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { ASSET_ICONS } from "@/components/shared/asset-icon";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateTime } from "@/lib/format";
@@ -137,7 +138,7 @@ export function RenameDialog({ target, onOpenChange, onSaved, fetchFresh, buildi
 
   const building = target?.kind === "building";
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={sheetOnMobile}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{building ? "แก้ไขอาคาร" : "แก้ไขชื่อห้อง / พื้นที่"}</DialogTitle>
@@ -166,7 +167,7 @@ export function RenameDialog({ target, onOpenChange, onSaved, fetchFresh, buildi
             </div>
           )}
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy || !!conflict}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {building ? "บันทึก" : "บันทึกชื่อ"}
@@ -174,7 +175,7 @@ export function RenameDialog({ target, onOpenChange, onSaved, fetchFresh, buildi
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
@@ -295,7 +296,7 @@ export function AssetTypeDialog({ target, onOpenChange, onSaved, fetchFresh }: T
   }
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
+    <FormDialog open={!!target} onOpenChange={(o) => !busy && onOpenChange(o)}>
       <DialogContent className={sheetOnMobile}>
         <DialogHeader>
           <DialogTitle className="font-heading text-lg font-semibold">{editing ? "แก้ไขประเภทอุปกรณ์" : "เพิ่มประเภทอุปกรณ์"}</DialogTitle>
@@ -340,7 +341,7 @@ export function AssetTypeDialog({ target, onOpenChange, onSaved, fetchFresh }: T
             </div>
           </div>
           <DialogFooter className="-mx-5 -mb-5 px-5">
-            <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>ยกเลิก</Button>
+            <DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
             <Button type="submit" disabled={busy || !!conflict}>
               {busy && <Loader2 className="animate-spin" aria-hidden />}
               {editing ? "บันทึก" : "เพิ่มประเภทอุปกรณ์"}
@@ -348,6 +349,6 @@ export function AssetTypeDialog({ target, onOpenChange, onSaved, fetchFresh }: T
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

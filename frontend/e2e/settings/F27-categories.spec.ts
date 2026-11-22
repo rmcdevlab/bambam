@@ -54,6 +54,7 @@ test.describe("admin", () => {
       await dup.getByLabel("ชื่ออาการ").fill("ลิฟต์ค้าง");
       await dup.getByRole("button", { name: "เพิ่มอาการ" }).click();
       await expect(dup.getByText("ชื่อนี้มีอยู่แล้วในหมวดนี้")).toBeVisible();
+      page.once("dialog", (d) => void d.accept()); // CR-057: closing with input asks first
       await dup.getByRole("button", { name: "ยกเลิก" }).click();
 
       // order: move the second symptom up

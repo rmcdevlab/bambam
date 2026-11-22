@@ -8,7 +8,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { createAsset, deactivateAsset, suggestAssetCode, updateAsset } from "../../api";
 import { assetFieldMessages, errorCode, errorMessage, fieldErrors } from "../../errors";
@@ -115,7 +116,7 @@ export function AssetDialog({ draft, plan, types, onClose, onSaved }: {
     <p id={`${id}-${field}-error`} role="alert" className="flex items-center gap-1 text-sm text-destructive"><AlertCircle className="size-4" aria-hidden />{errors[field]}</p>;
   const typeLocked = draft?.mode === "edit" || (draft?.mode === "add" && draft.fromDrop);
 
-  return <Dialog open={!!draft} onOpenChange={(o) => { if (!o && !busy) onClose(); }}>
+  return <FormDialog open={!!draft} onOpenChange={(o) => { if (!o && !busy) onClose(); }}>
     <DialogContent className="sm:max-w-md">
       <form onSubmit={submit} noValidate className="space-y-4">
         <DialogHeader>
@@ -151,12 +152,12 @@ export function AssetDialog({ draft, plan, types, onClose, onSaved }: {
           {error("roomId") || error("x")}
         </div>
         <DialogFooter className="gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>ยกเลิก</Button>
+          <DialogClose asChild><Button type="button" variant="ghost" disabled={busy}>ยกเลิก</Button></DialogClose>
           <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" aria-hidden />}บันทึก</Button>
         </DialogFooter>
       </form>
     </DialogContent>
-  </Dialog>;
+  </FormDialog>;
 }
 
 /** `ปิดใช้งาน {code}?` (BR-F31-4: deactivate only, the code stays taken). */

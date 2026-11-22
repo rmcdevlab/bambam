@@ -59,7 +59,7 @@ Desktop (≥1024px): sidebar + top bar (title "บันทึกผลซ่อ
 | Photos | `PhotoPicker` (`_common.md` §5) | required ≥ 1 |
 | Give back | `Button` link + give-back dialog (`_common.md` §7) | |
 | Submit | `Button` default, sticky bottom (mobile) | spinner + disabled while sending |
-| Leave confirm | discard dialog (`_common.md` §7) | |
+| Leave confirm | browser confirm (`_common.md` §7, CR-057); in the S07 sheet the close confirm | |
 
 ## Content and copy (exact Thai text)
 
@@ -92,7 +92,7 @@ Desktop (≥1024px): sidebar + top bar (title "บันทึกผลซ่อ
 
 - Submit validates both fields, then sends → `resolved` → S09.
 - "คืนงาน" → give-back dialog; on success toast "คืนงานแล้ว" → S09 (the typed result is dropped without asking — the dialog already confirmed).
-- Back / leave with typed text or photos → discard dialog.
+- Back / leave with typed text, photos or stars → browser leave confirm; closing the sheet → browser close confirm (CR-057).
 - Validation (field → rule → message):
   - สิ่งที่ทำ → required → กรุณาบอกสิ่งที่ทำ; max 1000 → ไม่เกิน 1000 ตัวอักษร
   - รูปหลังซ่อม → at least 1 (BR-F21-4) → แนบรูปหลังซ่อมอย่างน้อย 1 รูป · other photo messages `_common.md` §5

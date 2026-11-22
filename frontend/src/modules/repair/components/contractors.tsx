@@ -12,7 +12,8 @@ import { can, PERM } from "@/lib/platform/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -274,7 +275,7 @@ export function ContractorFormDialog({ contractor, open, onOpenChange, onSaved, 
     <div className="space-y-1.5"><label htmlFor={`contractor-${name}`} className="text-sm font-medium">{label}{opts.required && <span className="text-destructive">*</span>}</label>
       <Input id={`contractor-${name}`} type={opts.type} value={values[name]} maxLength={opts.max} placeholder={opts.placeholder} onChange={(e) => { setValues((v) => ({ ...v, [name]: e.target.value })); if (name === "name") setTaken(null); }} aria-invalid={!!errors[name]} className="h-11" />
       {errors[name] && <p role="alert" className="flex items-center gap-1 text-sm text-destructive"><AlertCircle className="size-4" aria-hidden />{errors[name]}</p>}</div>;
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  return <FormDialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
       <form onSubmit={submit} noValidate className="space-y-4">
         <DialogHeader><DialogTitle>{contractor ? "แก้ไขช่างภายนอก" : "เพิ่มช่างภายนอก"}</DialogTitle><DialogDescription>ข้อมูลนี้เห็นเฉพาะช่างและ Admin</DialogDescription></DialogHeader>
@@ -297,9 +298,9 @@ export function ContractorFormDialog({ contractor, open, onOpenChange, onSaved, 
         <div className="space-y-1.5"><label htmlFor="contractor-note" className="text-sm font-medium">หมายเหตุ</label>
           <Textarea id="contractor-note" value={values.note} maxLength={500} rows={3} onChange={(e) => setValues((v) => ({ ...v, note: e.target.value }))} /></div>
         {contractor && <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={values.isActive} onChange={(e) => setValues((v) => ({ ...v, isActive: e.target.checked }))} className="size-4 accent-primary" />ใช้งานอยู่ (ปิดไว้เมื่อเลิกจ้าง ประวัติยังอยู่)</label>}
-        <DialogFooter className="gap-2"><Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>ยกเลิก</Button>
+        <DialogFooter className="gap-2"><DialogClose asChild><Button type="button" variant="ghost" disabled={busy}>ยกเลิก</Button></DialogClose>
           <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" aria-hidden />}บันทึก</Button></DialogFooter>
       </form>
     </DialogContent>
-  </Dialog>;
+  </FormDialog>;
 }

@@ -90,6 +90,7 @@ test.describe("technician", () => {
     let form = await add(inactive.name);
     await expect(form.getByRole("alert")).toHaveText("มีร้านชื่อนี้แต่ปิดใช้งานอยู่ — เปิดใช้งานร้านเดิมแทนการเพิ่มใหม่");
     await expect(form.getByRole("link", { name: "ไปหน้าร้านนี้" })).toHaveAttribute("href", `/repair/contractors/${inactive.id}`);
+    page.once("dialog", (d) => void d.accept()); // CR-057: closing with input asks first
     await form.getByRole("button", { name: "ยกเลิก" }).click();
     form = await add(active.name);
     await expect(form.getByRole("alert")).toHaveText("มีช่างภายนอกชื่อนี้แล้ว");
@@ -111,6 +112,7 @@ test.describe("technician", () => {
     await form.getByRole("button", { name: "เลือกร้านนี้" }).click();
     await expect(page.getByText(`เลือก ${active.name} แล้ว`)).toBeVisible();
     await expect(dialog.getByRole("combobox", { name: /ช่างภายนอก/ })).toContainText(active.name);
+    page.once("dialog", (d) => void d.accept()); // CR-057: closing with input asks first
     await dialog.getByRole("button", { name: "ยกเลิก" }).click();
     expect((await (await as("admin", baseURL)).post(`${API}/tickets/${ticket.id}/close`, { data: { reason: "ล้างข้อมูลทดสอบ" } })).status()).toBe(200);
   });
