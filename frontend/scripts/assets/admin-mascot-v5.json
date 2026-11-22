@@ -1,0 +1,59 @@
+{
+  "generatedWith": "built-in image_gen",
+  "date": "2026-11-22",
+  "reference": "bam-mascot-admin-sequence-v4.webp (poses), bam-mascot-admin-sequence-v3.webp (identity)",
+  "assets": [
+    {
+      "file": "public/brand/bam-mascot-admin-hd-v5-1.webp",
+      "generatedSource": "exec-5e474e9b-7443-41c4-838c-11cc3ece0d9b.png",
+      "columns": 4,
+      "rows": 3,
+      "framePixels": 362
+    },
+    {
+      "file": "public/brand/bam-mascot-admin-hd-v5-2.webp",
+      "generatedSource": "exec-66c1a70e-3c85-435c-a170-a9d1c27283ab.png",
+      "columns": 4,
+      "rows": 3,
+      "framePixels": 362
+    },
+    {
+      "file": "public/brand/bam-mascot-admin-hd-v5-3.webp",
+      "generatedSource": "exec-c8dc55fd-f48e-4f16-a902-7e3418f745ea.png",
+      "columns": 4,
+      "rows": 3,
+      "framePixels": 362
+    },
+    {
+      "file": "public/brand/bam-mascot-admin-hd-v5-4.webp",
+      "generatedSource": "exec-aaf6d409-2b25-469a-abaf-d161fa82c4dc.png",
+      "columns": 4,
+      "rows": 3,
+      "framePixels": 362
+    },
+    {
+      "file": "public/brand/bam-mascot-admin-hd-v5-5.webp",
+      "generatedSource": "exec-c7042e77-27ac-48b6-8f28-255cab7ad2af.png",
+      "columns": 4,
+      "rows": 3,
+      "framePixels": 362
+    },
+    {
+      "file": "public/brand/bam-mascot-admin-hd-v5-6.webp",
+      "generatedSource": "exec-107f7453-27da-4fec-ae8a-49100a1d33cb.png",
+      "columns": 4,
+      "rows": 3,
+      "framePixels": 362
+    }
+  ],
+  "frames": 72,
+  "export": "Native 1448 x 1086 preserved; WebP quality 96, alphaQuality 100, effort 6; no resize or sharpening filter; generated alpha preserved.",
+  "prompts": [
+    "Use case: identity-preserve. This is a high-resolution restoration of an existing animation sprite sheet, NOT a new character or new animation. Image 1 is the EDIT TARGET: exactly 12 consecutive poses in a 4-column by 3-row grid. Image 2 is ONLY the higher-detail original identity reference: same white tiger cub, black stripes, amber eyes, pink nose, blue BAM polo, dark trousers and white trainers. Re-render image 1 with sharp native fine detail, crisp eyes, well-separated fur strands and clean clothing edges. Preserve ALL 12 poses, their exact order, the tiny joint angles, body scale, foot baseline and alignment. Preserve the exact FOUR columns and THREE rows of equal square cells. Output 2048 x 1536 pixels, each cell 512 x 512, or the highest native resolution possible at this exact 4:3 aspect. Each cell contains just one complete character with a small clean margin. No interpolation blur, no depth of field, no motion blur, no glow or sharpening halos. This needs to be sharp on a Retina display. Actual alpha-transparent exterior, opaque character, clean antialiased edges, NO gray background or baked checkerboard. No text or grid lines. Do not just enlarge the blurry pixels: reconstruct the detailed features from image 2 while precisely retaining image 1's poses.\nThis sheet is frames 0–11: standing with the rolled blueprint at viewer right, progressively raising the free paw at viewer left to wave.",
+    "Use case: identity-preserve. This is a high-resolution restoration of an existing animation sprite sheet, NOT a new character or new animation. Image 1 is the EDIT TARGET: exactly 12 consecutive poses in a 4-column by 3-row grid. Image 2 is ONLY the higher-detail original identity reference: same white tiger cub, black stripes, amber eyes, pink nose, blue BAM polo, dark trousers and white trainers. Re-render image 1 with sharp native fine detail, crisp eyes, well-separated fur strands and clean clothing edges. Preserve ALL 12 poses, their exact order, the tiny joint angles, body scale, foot baseline and alignment. Preserve the exact FOUR columns and THREE rows of equal square cells. Output 2048 x 1536 pixels, each cell 512 x 512, or the highest native resolution possible at this exact 4:3 aspect. Each cell contains just one complete character with a small clean margin. No interpolation blur, no depth of field, no motion blur, no glow or sharpening halos. This needs to be sharp on a Retina display. Actual alpha-transparent exterior, opaque character, clean antialiased edges, NO gray background or baked checkerboard. No text or grid lines. Do not just enlarge the blurry pixels: reconstruct the detailed features from image 2 while precisely retaining image 1's poses.\nFrames 12–23: continue waving with the paw at viewer left, then gradually lower that paw to the rolled blueprint at waist. Do not raise the arm again after lowering.",
+    "Use case: identity-preserve. This is a high-resolution restoration of an existing animation sprite sheet, NOT a new character or new animation. Image 1 is the EDIT TARGET: exactly 12 consecutive poses in a 4-column by 3-row grid. Image 2 is ONLY the higher-detail original identity reference: same white tiger cub, black stripes, amber eyes, pink nose, blue BAM polo, dark trousers and white trainers. Re-render image 1 with sharp native fine detail, crisp eyes, well-separated fur strands and clean clothing edges. Preserve ALL 12 poses, their exact order, the tiny joint angles, body scale, foot baseline and alignment. Preserve the exact FOUR columns and THREE rows of equal square cells. Output 2048 x 1536 pixels, each cell 512 x 512, or the highest native resolution possible at this exact 4:3 aspect. Each cell contains just one complete character with a small clean margin. No interpolation blur, no depth of field, no motion blur, no glow or sharpening halos. This needs to be sharp on a Retina display. Actual alpha-transparent exterior, opaque character, clean antialiased edges, NO gray background or baked checkerboard. No text or grid lines. Do not just enlarge the blurry pixels: reconstruct the detailed features from image 2 while precisely retaining image 1's poses.\nFrames 24–35: both hands take hold of the rolled blueprint at waist and slowly unroll it into the open sheet, gaze lowers to read. Preserve exactly the gradual widening shown in the edit target.",
+    "Use case: identity-preserve. This is a high-resolution restoration of an existing animation sprite sheet, NOT a new character or new animation. Image 1 is the EDIT TARGET: exactly 12 consecutive poses in a 4-column by 3-row grid. Image 2 is ONLY the higher-detail original identity reference: same white tiger cub, black stripes, amber eyes, pink nose, blue BAM polo, dark trousers and white trainers. Re-render image 1 with sharp native fine detail, crisp eyes, well-separated fur strands and clean clothing edges. Preserve ALL 12 poses, their exact order, the tiny joint angles, body scale, foot baseline and alignment. Preserve the exact FOUR columns and THREE rows of equal square cells. Output 2048 x 1536 pixels, each cell 512 x 512, or the highest native resolution possible at this exact 4:3 aspect. Each cell contains just one complete character with a small clean margin. No interpolation blur, no depth of field, no motion blur, no glow or sharpening halos. This needs to be sharp on a Retina display. Actual alpha-transparent exterior, opaque character, clean antialiased edges, NO gray background or baked checkerboard. No text or grid lines. Do not just enlarge the blurry pixels: reconstruct the detailed features from image 2 while precisely retaining image 1's poses.\nFrames 36–47: reading the open blueprint at waist, tiny gaze changes and head tilt; then look up. Keep the same open sheet and the exact existing tiny motions in the target.",
+    "Use case: identity-preserve. This is a high-resolution restoration of an existing animation sprite sheet, NOT a new character or new animation. Image 1 is the EDIT TARGET: exactly 12 consecutive poses in a 4-column by 3-row grid. Image 2 is ONLY the higher-detail original identity reference: same white tiger cub, black stripes, amber eyes, pink nose, blue BAM polo, dark trousers and white trainers. Re-render image 1 with sharp native fine detail, crisp eyes, well-separated fur strands and clean clothing edges. Preserve ALL 12 poses, their exact order, the tiny joint angles, body scale, foot baseline and alignment. Preserve the exact FOUR columns and THREE rows of equal square cells. Output 2048 x 1536 pixels, each cell 512 x 512, or the highest native resolution possible at this exact 4:3 aspect. Each cell contains just one complete character with a small clean margin. No interpolation blur, no depth of field, no motion blur, no glow or sharpening halos. This needs to be sharp on a Retina display. Actual alpha-transparent exterior, opaque character, clean antialiased edges, NO gray background or baked checkerboard. No text or grid lines. Do not just enlarge the blurry pixels: reconstruct the detailed features from image 2 while precisely retaining image 1's poses.\nFrames 48–59: gradually lift the open blueprint from waist to chest and present to viewer. Keep the same open plan and precisely preserve all intermediate poses.",
+    "Use case: identity-preserve. This is a high-resolution restoration of an existing animation sprite sheet, NOT a new character or new animation. Image 1 is the EDIT TARGET: exactly 12 consecutive poses in a 4-column by 3-row grid. Image 2 is ONLY the higher-detail original identity reference: same white tiger cub, black stripes, amber eyes, pink nose, blue BAM polo, dark trousers and white trainers. Re-render image 1 with sharp native fine detail, crisp eyes, well-separated fur strands and clean clothing edges. Preserve ALL 12 poses, their exact order, the tiny joint angles, body scale, foot baseline and alignment. Preserve the exact FOUR columns and THREE rows of equal square cells. Output 2048 x 1536 pixels, each cell 512 x 512, or the highest native resolution possible at this exact 4:3 aspect. Each cell contains just one complete character with a small clean margin. No interpolation blur, no depth of field, no motion blur, no glow or sharpening halos. This needs to be sharp on a Retina display. Actual alpha-transparent exterior, opaque character, clean antialiased edges, NO gray background or baked checkerboard. No text or grid lines. Do not just enlarge the blurry pixels: reconstruct the detailed features from image 2 while precisely retaining image 1's poses.\nFrames 60–71: lower and roll the open paper into the paw on viewer left; then the free arm on viewer right gradually extends to a final open upward-facing palm towards the dashboard card. Last pose must be open palm at viewer right, rolled paper at viewer left. Preserve the target sequence exactly."
+  ]
+}

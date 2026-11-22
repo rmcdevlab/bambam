@@ -18,46 +18,75 @@ import { attentionBadge, attentionReason, type AttentionReason, type AttentionTo
 // BAM does not walk; no replay / motion buttons. Plays once (6.8 s). Reduced motion, a
 // hidden tab, the hero leaving the screen or a sprite that fails to decode → the finished card at once.
 // The sequence waits in the reading pose until #27 has answered (or failed → the "no ticket" card).
-// Owner follow-up: 24 newly generated consecutive poses keep the same blueprint throughout the greeting,
-// unrolling, reading and presenting. Short blends connect the actual in-between frames.
+// Owner follow-up: 72 generated poses keep the same blueprint throughout the greeting,
+// unrolling, reading and presenting. Six HD sheets keep each pose sharp at the rendered size; 70 of them play.
 // `ดู Ticket นี้` and the `ควรติดตาม n งาน` pill open the S29 choice popups (detail S07 or the model).
 // Amendment 2 preserved: the last pose has an open palm towards the card, after the plan has opened.
+// Handover polish: the card flies on the compositor (Web Animations) along a soft arc, BAM's arm sweep overlaps the
+// card settling, the close sweep poses blend continuously and a small body lean follows the arm movement.
 
-const ATLAS = appPath("/brand/bam-mascot-admin-sequence-v3.webp"); // 6 × 4, 256px square frames, genuine alpha.
+// Keep the generated native detail: 12 poses per sheet instead of shrinking all 72 into one image.
+// v6 = the owner's v5 sheets re-registered (slots unchanged): each sheet scaled uniformly so BAM keeps one size, with
+// his feet on one ground line and shoe centre in every slot (v5 changed size per sheet and sheet 6 drifted ~8 px per
+// column). Provenance: docs/modules/repair/attachments/admin-hero-motion/README.md.
+const ATLASES = Array.from({ length: 6 }, (_, i) => appPath(`/brand/bam-mascot-admin-hd-v6-${i + 1}.webp`));
+const COLUMNS = 4, ROWS = 3, FRAMES_PER_SHEET = COLUMNS * ROWS;
+const slots = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+// Playback order by slot, one list per phase. The greeting rests (0, 4), brings the fist forward and up (1, 2, 5),
+// then opens the paw into the wave. Skipped: slot 3 (paw opened at the waist, which made the paw open, close and open
+// again) and slot 23 (paper already pulled sideways; sheet 3 restarts from the one-hand hold, so 23 → 24 snapped back).
+const GREET_POSES = [0, 4, 1, 2, 5, ...slots(6, 22)];
+const READ_POSES = slots(24, 47), PRESENT_POSES = slots(48, 59), HANDOVER_POSES = slots(60, 71);
 type Pose = { frame: number };
 
 // Time for the finer gestures, a readable greeting and a pause to study the open plan.
 const INTRO = 200, GREET = 1700, READ = 4400, PRESENT = 5200, ZOOM = 6800;
 type Phase = "intro" | "greet" | "read" | "present" | "zoom" | "done";
 
-// Quick changes of direction, with a little extra time at the outside of each wave.
-const waveSweep: [number, number][] = [[3, 90], [4, 65], [5, 105], [4, 65]];
-const WAVE_BEATS: [frame: number, ms: number][] = [
-  [0, 120], [1, 100], [2, 100],
-  ...waveSweep, ...waveSweep, ...waveSweep,
-  [6, 100], [7, 130], [8, 0],
-];
-function waveFrame(t: number) {
-  let at = 0;
-  for (const [frame, ms] of WAVE_BEATS) { if (ms === 0 || t < at + ms) return frame; at += ms; }
-  return 8;
-}
+// The handover, in ms from PRESENT: the plan lifts off BAM's hands and flies to the card's place (FLIGHT) while he
+// lowers his hands; his arm sweeps out as the card slows down and the palm opens as it settles (amendment 2: the
+// palm stays last, once the plan has opened). The lean starts just before the sweep and ends before "done".
+const FLIGHT = 1150, LEAN_AT = 420, LEAN = 900;
+// Each phase uses its own authored in-betweens rather than repeating a handful of wave poses.
+// The palm settles before the end, leaving a short readable hold beside the opened card.
+const WAVE_STEP = GREET / GREET_POSES.length, READ_STEP = (READ - GREET) / READ_POSES.length;
+const PRESENT_STEP = (PRESENT - READ) / PRESENT_POSES.length, HANDOVER_STEP = 100;
+const nth = (poses: number[], i: number) => poses[Math.min(poses.length - 1, Math.floor(i))];
 function poseAt(t: number): Pose {
-  if (t < GREET) return { frame: waveFrame(t) };
-  if (t < READ) return { frame: Math.min(15, 9 + Math.floor((t - GREET) / 220)) };
-  if (t < PRESENT) return { frame: Math.min(19, 16 + Math.floor((t - READ) / 200)) };
-  if (t < PRESENT + 400) return { frame: 19 };
-  return { frame: Math.min(22, 20 + Math.floor((t - PRESENT - 400) / 400)) };
+  if (t < GREET) return { frame: nth(GREET_POSES, t / WAVE_STEP) };
+  if (t < READ) return { frame: nth(READ_POSES, (t - GREET) / READ_STEP) };
+  if (t < PRESENT) return { frame: nth(PRESENT_POSES, (t - READ) / PRESENT_STEP) };
+  return { frame: nth(HANDOVER_POSES, (t - PRESENT) / HANDOVER_STEP) };
 }
 const phaseAt = (t: number): Phase => (t < INTRO ? "intro" : t < GREET ? "greet" : t < READ ? "read" : t < PRESENT ? "present" : t < ZOOM ? "zoom" : "done");
-const framePos = (p: Pose) => `${(p.frame % 6) * 20}% ${Math.floor(p.frame / 6) * 100 / 3}%`;
+const framePos = (p: Pose) => {
+  const cell = p.frame % FRAMES_PER_SHEET;
+  return `${(cell % COLUMNS) * 100 / (COLUMNS - 1)}% ${Math.floor(cell / COLUMNS) * 100 / (ROWS - 1)}%`;
+};
 /** The last pose: BAM's open palm towards the opened plan card (amendment 2). */
-const PRESENTING: Pose = { frame: 23 };
-/** Shorter than each pose, avoiding doubled hands/eyes during the finer movements. */
-const FADE = 120;
+const PRESENTING: Pose = { frame: 71 };
+const frameDuration = (frame: number) => frame < 24 ? WAVE_STEP : frame < 48 ? READ_STEP : frame < 60 ? PRESENT_STEP : HANDOVER_STEP;
+// Keep each pose crisp for most of its interval; long dissolves create doubled eyes, stripes and paws.
+const POSE_BLEND_MS = 24;
+const EASE_IN_OUT = "cubic-bezier(.45,0,.55,1)";
+
+type Zoom = { x: number; y: number; sx: number; sy: number };
+/** The card's flight from the sheet BAM holds (`z`: its offset and scale relative to the card) to its own place,
+ *  sampled so it runs on the compositor: it slides out ahead of rising (a soft arc that keeps clear of BAM's face)
+ *  and grows a little past full size before settling. */
+function flightKeyframes(z: Zoom): Keyframe[] {
+  const N = 72, frames: Keyframe[] = [];
+  for (let i = 0; i <= N; i++) {
+    const u = i / N - 1;
+    const grow = 1 + 2 * u * u * u + u * u; // ease-out-back (c = 1): ~4% of the growth past full size
+    const sx = z.sx + (1 - z.sx) * grow, sy = z.sy + (1 - z.sy) * grow;
+    frames.push({ transform: `translate(${(z.x * u * u).toFixed(2)}px, ${(-z.y * u).toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` });
+  }
+  return frames;
+}
 function paint(el: HTMLElement, p: Pose) {
-  el.style.backgroundImage = `url(${ATLAS})`;
-  el.style.backgroundSize = "600% 400%";
+  el.style.backgroundImage = `url(${ATLASES[Math.floor(p.frame / FRAMES_PER_SHEET)]})`;
+  el.style.backgroundSize = `${COLUMNS * 100}% ${ROWS * 100}%`;
   el.style.backgroundPosition = framePos(p);
 }
 
@@ -84,7 +113,9 @@ type Props = {
 
 export function AdminHero({ name, overview, failed, onGoToMap, onOpenTicket, onOpenAttention, onRevealed }: Props) {
   const heroRef = useRef<HTMLElement>(null);
-  const signRef = useRef<HTMLDivElement>(null);
+  // Where the blueprint sits in BAM's hands as the handover starts (slot 60); the card grows from there. The sprite's
+  // own blueprint stays visible: the old HTML sign covered the 12 lifting poses and BAM's paws.
+  const planRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLElement>(null);
   const [art, setArt] = useState<"loading" | "ready" | "failed">("loading");
   const [phase, setPhase] = useState<Phase>("intro");
@@ -117,13 +148,11 @@ export function AdminHero({ name, overview, failed, onGoToMap, onOpenTicket, onO
   }, [floorId]);
   const floorPlan = floorId && plan?.floorId === floorId ? plan.plan : null;
 
-  const show = useCallback((p: Pose) => {
+  const show = useCallback((p: Pose, at = 0) => {
     const s = shown.current;
     if (s.frame === p.frame) return;
     shown.current = p;
-    // Brief overlaps soften the authored wave frames; longer blends connect the blueprint poses.
-    const waving = s.frame <= 8 && p.frame <= 8;
-    const duration = waving ? 45 : FADE;
+    const duration = POSE_BLEND_MS;
     const next = front.current === 0 ? 1 : 0;
     const inc = next === 0 ? layerA.current : layerB.current, out = next === 0 ? layerB.current : layerA.current;
     front.current = next;
@@ -135,8 +164,11 @@ export function AdminHero({ name, overview, failed, onGoToMap, onOpenTicket, onO
     out.style.opacity = "1";
     inc.style.opacity = "1";
     out.style.opacity = "0";
-    inc.animate([{ opacity: 0 }, { opacity: 1 }], { duration: duration * 0.55, easing: "ease-in-out", fill: "backwards" });
-    out.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration, easing: "ease-in-out", fill: "backwards" });
+    const blends = [
+      inc.animate([{ opacity: 0 }, { opacity: 1 }], { duration: duration * 0.55, easing: "ease-in-out", fill: "backwards" }),
+      out.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration, easing: "ease-in-out", fill: "backwards" }),
+    ];
+    blends.forEach((animation) => { animation.currentTime = at; });
   }, []);
 
   // show one pose at once, no fade (start, reduced motion, end of the run)
@@ -152,25 +184,23 @@ export function AdminHero({ name, overview, failed, onGoToMap, onOpenTicket, onO
 
   // ---- the sequence (rAF; ends for good on "done") ----
   const elapsed = useRef(0);
-  const zoomFrom = useRef<{ x: number; y: number; sx: number; sy: number } | null>(null);
-  // `played`: the run reached its end → dissolve into the gesture once the card has opened; otherwise (reduced motion,
-  // hidden tab, off screen, sprite failure) the gesture shows at once.
+  const launched = useRef(false);
+  const leaned = useRef(false);
+  // `played`: the run reached its end (the gesture is already showing); otherwise (reduced motion, hidden tab, off
+  // screen, sprite failure) the gesture and the opened card show at once.
   const finish = useCallback((played = false) => {
     elapsed.current = ZOOM;
-    zoomFrom.current = null;
-    if (boardRef.current) { boardRef.current.style.transform = ""; boardRef.current.style.opacity = ""; }
-    if (signRef.current) signRef.current.style.opacity = "";
+    boardRef.current?.getAnimations().forEach((a) => a.cancel());
     if (played) show(PRESENTING);
     else { shown.current = PRESENTING; restOn(PRESENTING); }
     setPhase("done");
   }, [restOn, show]);
 
-  // Decode the entire atlas before playback: no missing frames or mid-sequence asset requests.
+  // Decode every sheet before playback: no blurry low-resolution fallback or mid-gesture asset swap.
   useEffect(() => {
     let alive = true;
-    const img = new Image();
-    img.src = ATLAS;
-    img.decode()
+    const images = ATLASES.map((src) => { const image = new Image(); image.src = src; return image; });
+    Promise.all(images.map((image) => image.decode()))
       .then(() => {
         if (!alive) return;
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) finish();
@@ -185,38 +215,57 @@ export function AdminHero({ name, overview, failed, onGoToMap, onOpenTicket, onO
   useLayoutEffect(() => {
     if (art !== "ready" || elapsed.current >= ZOOM) return;
     let raf = 0, last = 0;
+    let currentPhase = phaseAt(elapsed.current);
     // BAM eases in (the S06 hero walks in; here he only rises and fades in)
     if (elapsed.current === 0) bodyRef.current?.animate(
       [{ opacity: 0, transform: "translateY(14px) scale(0.97)" }, { opacity: 1, transform: "none" }],
       { duration: 520, easing: "cubic-bezier(.2,.8,.2,1)" });
     const tick = (now: number) => {
       if (elapsed.current >= ZOOM) return;
-      if (last) elapsed.current += Math.min(60, now - last);
+      // Keep the sprite and compositor animations on the same wall clock, including slow frames.
+      if (last) elapsed.current += now - last;
       last = now;
       // wait in the reading pose until #27 has answered
       if (!readyRef.current && elapsed.current > READ - 1) elapsed.current = READ - 1;
       const t = elapsed.current;
       const p = phaseAt(t);
       if (p === "done") { finish(true); return; }
-      setPhase(p);
-      show(poseAt(t));
-      if (p === "zoom") zoom((t - PRESENT) / (ZOOM - PRESENT));
+      if (p !== currentPhase) { currentPhase = p; setPhase(p); }
+      const pose = poseAt(t);
+      const phaseStart = t < GREET ? 0 : t < READ ? GREET : t < PRESENT ? READ : PRESENT;
+      show(pose, (t - phaseStart) % frameDuration(pose.frame));
+      if (p === "zoom") {
+        if (!launched.current) launch(t - PRESENT);
+        if (!leaned.current && t >= PRESENT + LEAN_AT) { leaned.current = true; lean(t - PRESENT - LEAN_AT); }
+      }
       raf = requestAnimationFrame(tick);
     };
-    // the plan grows from the sheet BAM holds (measured once the card is laid out) to the card's own place
-    const zoom = (progress: number) => {
-      const board = boardRef.current, sign = signRef.current;
-      if (!board || !sign || board.offsetParent === null) return;
-      if (!zoomFrom.current) {
-        board.style.transform = "none";
-        const s = sign.getBoundingClientRect(), d = board.getBoundingClientRect();
-        if (!d.width || !d.height) return;
-        zoomFrom.current = { x: s.left - d.left, y: s.top - d.top, sx: s.width / d.width, sy: s.height / d.height };
-      }
-      const k = 1 - Math.pow(1 - progress, 3), z = zoomFrom.current;
-      board.style.transform = `translate(${z.x * (1 - k)}px, ${z.y * (1 - k)}px) scale(${z.sx + (1 - z.sx) * k}, ${z.sy + (1 - z.sy) * k})`;
-      board.style.opacity = String(0.6 + 0.4 * k);
-      sign.style.opacity = String(Math.max(0, 1 - progress * 4));
+    // The plan grows from the blueprint in BAM's hands (measured once the card is laid out) to the card's own place.
+    // Started once and left to the compositor, so React renders at the phase changes cannot stall it.
+    const launch = (at: number) => {
+      const board = boardRef.current, from = planRef.current;
+      if (!board || !from || board.offsetParent === null) return;
+      const s = from.getBoundingClientRect(), d = board.getBoundingClientRect();
+      if (!d.width || !d.height) return;
+      launched.current = true;
+      const z = { x: s.left - d.left, y: s.top - d.top, sx: s.width / d.width, sy: s.height / d.height };
+      // The card fades in over the drawn blueprint as it lifts off; BAM then lowers and rolls his copy (slots 61–65).
+      const anims = [
+        board.animate(flightKeyframes(z), { duration: FLIGHT, easing: "ease", fill: "both" }),
+        board.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: "ease-out", fill: "both" }),
+      ];
+      anims.forEach((a) => { a.currentTime = at; }); // in step with the sprite clock
+    };
+    // BAM gathers, leans into the sweep towards the card, then settles upright (feet stay put: origin 50% 92%)
+    const lean = (at: number) => {
+      const animation = bodyRef.current?.animate([
+        { transform: "none", easing: EASE_IN_OUT },
+        { transform: "translate(-1px, 1px) rotate(-0.8deg)", offset: 0.16, easing: EASE_IN_OUT },
+        { transform: "translate(3px, -1px) rotate(1.6deg)", offset: 0.5, easing: EASE_IN_OUT },
+        { transform: "translate(1px, 0) rotate(0.5deg)", offset: 0.78, easing: EASE_IN_OUT },
+        { transform: "none" },
+      ], { duration: LEAN });
+      if (animation) animation.currentTime = at;
     };
     raf = requestAnimationFrame(tick);
     // leaving the screen or the tab ends the sequence
@@ -270,10 +319,7 @@ export function AdminHero({ name, overview, failed, onGoToMap, onOpenTicket, onO
                 <div ref={layerA} className="ah-pose" />
                 <div ref={layerB} className="ah-pose" />
               </div>
-              <div ref={signRef} className={cn("ah-sign", (phase === "present" || phase === "zoom") && "ah-sign-up")}>
-                <div className="ah-sign-art">{visual}</div>
-                <strong>{ticket ? `${ticket.building.name} · ${floorLabel(ticket.floor.name)}` : "BAM"}</strong>
-              </div>
+              <div ref={planRef} className="ah-plan-from" />
             </div>}
       </div>
 

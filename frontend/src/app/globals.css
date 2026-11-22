@@ -391,19 +391,9 @@ button.ah-pill:focus-visible { outline: 3px solid #f3bc69; outline-offset: 3px; 
 .ah-art.ah-reading { animation: ah-read 1.5s ease-in-out 1; }
 .ah-body { position: absolute; inset: 0; transform-origin: 50% 92%; }
 .ah-pose { position: absolute; inset: 0; background-repeat: no-repeat; opacity: 0; will-change: opacity; }
-.ah-sign {
-  position: absolute; left: 29px; top: 93px; width: 161px; height: 88px; padding: 5px;
-  color: var(--foreground); background: var(--card); border: 3px solid color-mix(in srgb, var(--primary) 18%, var(--card)); border-radius: 5px;
-  box-shadow: 0 3px 5px rgb(23 32 51 / 19%); opacity: 0; transform: perspective(500px) rotateX(-80deg) scale(0.7); transform-origin: 50% 0;
-  transition: transform 400ms ease, opacity 220ms ease;
-}
-.ah-sign.ah-sign-up { opacity: 1; transform: none; }
-.ah-sign::before, .ah-sign::after { content: ""; position: absolute; top: 20px; width: 15px; height: 23px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); box-shadow: 0 2px 3px rgb(20 32 51 / 13%); }
-.ah-sign::before { left: -10px; } .ah-sign::after { right: -10px; }
-.ah-sign-art { height: 50px; display: flex; }
-.ah-sign-art > div { width: 50%; }
-.ah-sign strong { display: block; margin-top: 3px; text-align: center; font-size: 9px; line-height: 1.4; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ah-sign svg, .ah-visual svg { display: block; width: 100%; height: 100%; }
+/* invisible: the blueprint in BAM's hands at the start of the handover (sprite slot 60); the card grows from here */
+.ah-plan-from { position: absolute; left: 29.3%; top: 49.7%; width: 46.7%; height: 24.9%; pointer-events: none; }
+.ah-visual svg { display: block; width: 100%; height: 100%; }
 
 /* speech: beside BAM's head while greeting (owner: closer, so it reads as BAM talking); a short note under the card after */
 .ah-speech {
@@ -462,9 +452,6 @@ button.ah-pill:focus-visible { outline: 3px solid #f3bc69; outline-offset: 3px; 
 @container (max-width: 440px) {
   .ah-top { padding: 0 14px; } .ah-top h2 { font-size: 12px; gap: 6px; } .ah-pill { font-size: 10px; padding: 4px 7px; }
   .ah-actor { top: 34px; width: 156px; height: 156px; }
-  .ah-sign { left: 20px; top: 66px; width: 115px; height: 65px; padding: 4px; }
-  .ah-sign-art { height: 34px; } .ah-sign strong { font-size: 7px; }
-  .ah-sign::before, .ah-sign::after { width: 11px; height: 17px; top: 14px; }
   .ah-speech { left: 136px; top: 34px; width: calc(100% - 138px); padding: 11px 12px; }
   .ah-speech::before { top: 24px; }
   .ah-speech h3 { font-size: 13.5px; } .ah-speech p { font-size: 11.5px; } .ah-caption { font-size: 10px; }

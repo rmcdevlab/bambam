@@ -194,9 +194,12 @@ export function AdminDashboard() {
         </div>}
         {!overview ? <Skeleton className="h-60 rounded-none lg:h-140" />
           : show3D ? <div className="h-140 border-t">
-              <BuildingCard buildings={modelBuildings} site={overview.site} buildingId={building?.id ?? null}
+              {/* Building the WebGL scene blocks the main thread. Wait until the greeting finishes (or the
+                  hero scrolls out of view) so its finer sprite frames can actually be painted. */}
+              {revealed ? <BuildingCard buildings={modelBuildings} site={overview.site} buildingId={building?.id ?? null}
                 side={side} onOpenBuilding={openBuilding} onShowSite={(s) => setBuildingId(SITE[s])} canEdit={isAdmin} editing={editing}
                 canRename={canRename} onRenamed={onRenamed} focus={focus} />
+                : <Skeleton className="size-full rounded-none" />}
             </div>
           : building ? <FloorList embedded building={building} focus={focus?.buildingId === building.id ? focus : null} note={!with3D ? undefined : desktop
               ? (webgl ? "อาคารนี้ยังไม่มีโมเดล 3 มิติ" : "เบราว์เซอร์นี้แสดงภาพ 3 มิติไม่ได้")
