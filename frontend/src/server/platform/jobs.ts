@@ -1,6 +1,7 @@
 import "server-only";
 import { pool } from "./db";
 import { query,rows } from "./query";
+import { config } from "./config";
 import { deleteFile } from "../repair/photos";
 const globalJobs=globalThis as typeof globalThis & {bambamJobs?:ReturnType<typeof setInterval>};
 export async function maintenance() {
@@ -19,10 +20,9 @@ export async function maintenance() {
  }finally{if(locked)await db.query("SELECT pg_advisory_unlock(56004)");db.release();}
 }
 export function startJobs() {
- const mode=process.env.MAINTENANCE_SCHEDULER??"interval";
- if(!["interval","external"].includes(mode))throw new Error("Invalid MAINTENANCE_SCHEDULER");
+ const {MAINTENANCE_SCHEDULER:mode,maintenanceIntervalMs}=config();
  if(mode==="external"||globalJobs.bambamJobs)return;
  let running=false;
  const tick=async()=>{if(running)return;running=true;try{await maintenance();}catch{console.error(JSON.stringify({event:"maintenance_failed"}));}finally{running=false;}};
- globalJobs.bambamJobs=setInterval(tick,60000);globalJobs.bambamJobs.unref();void tick();
+ globalJobs.bambamJobs=setInterval(tick,maintenanceIntervalMs);globalJobs.bambamJobs.unref();void tick();
 }

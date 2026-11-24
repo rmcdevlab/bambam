@@ -25,6 +25,12 @@ const schema = z.object({
   PHOTO_STORAGE_DIR: z.string().optional(),
   MAINTENANCE_SCHEDULER: z.enum(["interval", "external"]).default("interval"),
   MAINTENANCE_JOB_SECRET: z.string().min(32).optional(),
+  // How often the in-process scheduler runs maintenance (auto-close, expired sessions, orphan photos). Nothing in it
+  // needs minute precision; dev uses `1m` so a shortened auto-close window shows up quickly.
+  MAINTENANCE_INTERVAL: z.string().default("10m"),
+  // How long a resolved ticket waits for the reporter before maintenance closes it (repair BR, 72 h). Dev / UAT may
+  // shorten it to test auto-close (e.g. `5m`); production always uses 72 h.
+  REPAIR_AUTO_CLOSE_AFTER: z.string().default("72h"),
   SUPER_ADMIN_EMPLOYEE_CODES: z.string().default(""),
 });
 export function parseConfig(source: Record<string, string | undefined>) {
@@ -34,6 +40,10 @@ export function parseConfig(source: Record<string, string | undefined>) {
   const c = parsed.data;
   if (c.APP_ENV !== "development" && !c.PHOTO_STORAGE_DIR) throw new Error("PHOTO_STORAGE_DIR is required outside development");
   const sessionTTL = duration(c.APP_SESSION_TTL), clockSkew = duration(c.SSO_CLOCK_SKEW);
+  const autoClose = duration(c.REPAIR_AUTO_CLOSE_AFTER);
+  if (autoClose <= 0) throw new Error("Invalid REPAIR_AUTO_CLOSE_AFTER");
+  const maintenanceInterval = duration(c.MAINTENANCE_INTERVAL);
+  if (maintenanceInterval < 10 || maintenanceInterval > 24 * 3600) throw new Error("Invalid MAINTENANCE_INTERVAL");
   if (sessionTTL <= 0 || clockSkew > 600) throw new Error("Invalid session TTL or clock skew");
   if (c.APP_SESSION_SECRET === c.SSO_CLIENT_SECRET) throw new Error("Session and SSO secrets must differ");
   for (const key of ["SSO_AUTHORIZE_URL", "SSO_TOKEN_URL", "SSO_USERINFO_URL", "SSO_END_SESSION_URL"] as const) {
@@ -41,6 +51,8 @@ export function parseConfig(source: Record<string, string | undefined>) {
   }
   return { ...c, sessionTTL, clockSkew,
     roleSwitcher: c.APP_ENV !== "production" && c.ROLE_SWITCHER_ENABLED === "true",
+    maintenanceIntervalMs: Math.round(maintenanceInterval * 1000),
+    repairAutoCloseMs: c.APP_ENV === "production" ? 72 * 3600_000 : Math.round(autoClose * 1000),
     superAdmins: [...new Set(c.SUPER_ADMIN_EMPLOYEE_CODES.split(",").map(s => s.trim()).filter(Boolean))],
     environment: c.APP_ENV === "production" ? null : c.APP_ENV === "uat" ? "UAT" : "DEV",
   };

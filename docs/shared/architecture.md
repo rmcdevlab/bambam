@@ -12,7 +12,7 @@ Approved 2026-11-19. One Next.js 16.4.6 application now serves the UI, auth, rep
 - `frontend/db/queries/` contains the named SQL sources; `npm run db:generate` emits the static query catalog. `frontend/db/migrations/` retains existing SQL Up/Down files; `npm run db:migrate` uses `public.goose_db_version`, an advisory lock and a transaction per migration. No Go/Goose binary is required. (CR-056)
 - Server startup validates configuration, assigns configured Superadmins and initializes dev/UAT demo users. `proxy.ts` is only a UI gate; each native API resolves the session and reloads effective permissions. (CR-056)
 - Photos use `PHOTO_STORAGE_DIR` (development default `frontend/data/photos`, explicit persistent directory required in UAT/production). Existing files stay accessible when this points to their original directory. Do not store uploads in `public/`. (CR-056)
-- The Node server's instrumentation runs maintenance every minute by default; a PostgreSQL advisory lock prevents overlapping processes. `MAINTENANCE_SCHEDULER=external` instead requires a scheduled `POST /api/internal/maintenance` every minute with a server-only bearer secret. Due tickets close after the existing 72-hour window, expired sessions are removed, and unattached uploads expire after 24 hours. Hosting has not been selected; deployment must provide reliable scheduling and persistent/shared photo storage. (CR-056)
+- The Node server's instrumentation runs maintenance every `MAINTENANCE_INTERVAL` (default 10 minutes; dev `.env` uses 1 minute); a PostgreSQL advisory lock prevents overlapping processes. `MAINTENANCE_SCHEDULER=external` instead requires a scheduled `POST /api/internal/maintenance` (every 10 minutes is enough) with a server-only bearer secret. Due tickets close after the existing 72-hour window (`REPAIR_AUTO_CLOSE_AFTER` can shorten it outside production for testing; the window is fixed when the technician resolves), expired sessions are removed, and unattached uploads expire after 24 hours. Hosting has not been selected; deployment must provide reliable scheduling and persistent/shared photo storage. (CR-056)
 
 ## API conventions
 
@@ -76,7 +76,9 @@ How dev → production switching works: **code is identical; only env vars diffe
 | `SUPER_ADMIN_EMPLOYEE_CODES` | server | optional comma-separated employee codes | initial Superadmin codes for that environment |
 | `ROLE_SWITCHER_ENABLED` | server | `true` for dev/UAT | ignored in production |
 | `MAINTENANCE_SCHEDULER` | server | `interval` | `interval` for a persistent Node process; `external` for a managed scheduler |
+| `MAINTENANCE_INTERVAL` | server | `1m` in dev `.env` (default `10m`) | `10m`; Go duration, 10 s – 24 h; interval mode only |
 | `MAINTENANCE_JOB_SECRET` | server secret | optional | optional separate secret, at least 32 chars; otherwise session secret is used for the internal job endpoint |
+| `REPAIR_AUTO_CLOSE_AFTER` | server | `72h`; may be shortened (e.g. `5m`) to test auto-close | ignored, always `72h` |
 | `NEXT_PUBLIC_API_BASE_URL` | browser build | `/api/v1` | `/api/v1` |
 | `NEXT_PUBLIC_USE_MOCKS` | browser build | `false` for the real app | `false` |
 | `NEXT_PUBLIC_ROLE_SWITCHER` | browser build | `true` | `false` |

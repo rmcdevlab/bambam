@@ -21,6 +21,7 @@ const apiEnv = {
   SSO_END_SESSION_URL: required("E2E_SSO_END_SESSION_URL"),
   SSO_REDIRECT_URI: required("E2E_SSO_REDIRECT_URI"), SSO_POST_LOGOUT_REDIRECT_URI: required("E2E_SSO_POST_LOGOUT_REDIRECT_URI"),
   MAINTENANCE_SCHEDULER: "external", PHOTO_STORAGE_DIR: path.join(ROOT,"frontend","data","e2e-photos"),
+  REPAIR_AUTO_CLOSE_AFTER: "72h", // pinned: a shortened local value in frontend/.env must not leak into F21
 };
 const webEnv = { ...apiEnv, NEXT_PUBLIC_USE_MOCKS: "false", NEXT_PUBLIC_ROLE_SWITCHER: "true", NEXT_DIST_DIR: testEnv.E2E_DIST_DIR ?? ".next-e2e" };
 

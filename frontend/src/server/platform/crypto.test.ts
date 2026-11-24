@@ -47,6 +47,17 @@ test("config gates demo access in production and rejects invalid secrets/duratio
   for (const patch of [{ APP_SESSION_SECRET: "short" }, { APP_SESSION_TTL: "0" }, { SSO_CLOCK_SKEW: "11m" }, { SSO_CLIENT_SECRET: c.APP_SESSION_SECRET }, { SSO_TOKEN_URL: "https://evil.test" }]) assert.throws(() => parseConfig({ ...testConfig, ...patch }));
   assert.throws(() => parseConfig({ ...testConfig, DATABASE_URL: "very-secret-invalid-value" }), error => error instanceof Error && !error.message.includes("very-secret"));
 });
+test("maintenance interval: 10 min by default, configurable within 10 s - 24 h", () => {
+  assert.equal(c.maintenanceIntervalMs, 600_000);
+  assert.equal(parseConfig({ ...testConfig, MAINTENANCE_INTERVAL: "1m" }).maintenanceIntervalMs, 60_000);
+  for (const value of ["5s", "25h", "often"]) assert.throws(() => parseConfig({ ...testConfig, MAINTENANCE_INTERVAL: value }));
+});
+test("auto-close window: 72 h by default, shortened outside production only", () => {
+  assert.equal(c.repairAutoCloseMs, 72 * 3600_000);
+  assert.equal(parseConfig({ ...testConfig, REPAIR_AUTO_CLOSE_AFTER: "5m" }).repairAutoCloseMs, 300_000);
+  assert.equal(parseConfig({ ...testConfig, APP_ENV: "production", PHOTO_STORAGE_DIR: "/data", REPAIR_AUTO_CLOSE_AFTER: "5m" }).repairAutoCloseMs, 72 * 3600_000);
+  for (const value of ["0", "soon"]) assert.throws(() => parseConfig({ ...testConfig, REPAIR_AUTO_CLOSE_AFTER: value }));
+});
 
 test("permission registry matches the complete matrix catalog", () => {
   assert.deepEqual(catalog.flatMap(system=>system.groups.flatMap(group=>group.permissions.map(p=>p.key))),[...permissionKeys]);

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 export { list } from "../platform/http";
 import { list } from "../platform/http";
 import { transaction } from "../platform/db";
+import { config } from "../platform/config";
 import { one,rows,query,ref,page,uuid,ids,text,nullable,invalid,fail,escapeLike,type Row,type DB } from "../platform/query";
 import { requirePermission as permit } from "../platform/permissions";
 import type { User } from "../platform/service";
@@ -118,7 +119,7 @@ export async function action(id:string,action:string,u:User,b:Row) {
    state("in_progress");if(!t.expected_done_on||!t.work_by)fail("ASSESSMENT_REQUIRED");
    const note=text(b.note,"note",500,true),photos=ids(b.photoIds,"photoIds",1,5),rating=t.work_by==="contractor"?b.contractorRating??null:null;
    if(t.work_by==="contractor"&&!t.contractor_rating&&rating==null)invalid({contractorRating:"REQUIRED"});if(rating!=null&&(!Number.isInteger(rating)||rating<1||rating>5))invalid({contractorRating:"INVALID"});
-   await query("repair.ResolveTicket",{id,technician_id:u.id,note,contractor_rating:rating,contractor_rating_comment:nullable(text(b.contractorRatingComment,"contractorRatingComment",500)),now,auto_close_at:new Date(Date.now()+72*3600000)},db);
+   await query("repair.ResolveTicket",{id,technician_id:u.id,note,contractor_rating:rating,contractor_rating_comment:nullable(text(b.contractorRatingComment,"contractorRatingComment",500)),now,auto_close_at:new Date(Date.now()+config().repairAutoCloseMs)},db);
    await event(db,id,u,"resolved",note,{},photos,"result");
   }else if(action==="confirm"||action==="send-back"){
    if(t.reporter_id!==u.id)fail("NOT_REPORTER","forbidden");state("resolved");
