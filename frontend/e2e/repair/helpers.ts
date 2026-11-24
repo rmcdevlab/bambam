@@ -69,15 +69,16 @@ export async function report(api: APIRequestContext, spot: string, team: { note:
 export async function fillPlace(page: Page, spot: string, path = "/repair/new") {
   await page.goto(path);
   const s = page.locator('[data-step="location"]');
-  await expect(s.getByRole("heading", { name: "ปัญหาเกิดขึ้นที่ไหน" })).toBeVisible();
+  await expect(s.getByRole("heading", { name: "ปัญหาเกิดขึ้นที่ไหน" })).toBeVisible({ timeout: 30_000 }); // first visit compiles S03 on `next dev`
   const restart = page.getByRole("button", { name: "เริ่มใหม่" });
   if (await restart.isVisible()) await restart.click();
   await pickBuilding(page, PLACE.building);
   await pickFloor(page, PLACE.floor);
   await pickRoom(page, PLACE.room);
   await s.getByLabel("บอกจุดเพิ่มเติม").fill(spot);
-  await page.getByRole("button", { name: "ถัดไป" }).click();
+  await submitReady(page, "ถัดไป"); // a click while the step still counts as missing is ignored (CR-034)
   const p = page.locator('[data-step="problem"]');
+  await expect(p).toBeVisible();
   const checked = page.waitForResponse((r) => r.url().includes(`${API}/tickets/duplicates`)
     && new URL(r.url()).searchParams.get("locationDetail")?.trim() === spot.trim(), { timeout: 15_000 });
   await pickCategory(page, PLACE.category);

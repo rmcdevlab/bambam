@@ -831,6 +831,18 @@ Rework after accepted stages (repair + settings + shared UI). Spec: `changes/CR-
 - [x] e2e updated for the browser dialog
 - [x] Owner accepted 2026-11-22 (`repair-cr-057`). Full e2e on the test stack still to run (PROGRESS open issue)
 
+## Stage CR-059 — progress updates while in progress + app-logo favicon (CR-059)
+
+Rework after accepted stages (repair + one settings permission key + app shell). Spec: `changes/CR-059.md`.
+
+- [x] Favicon (`app/favicon.ico` 16–64 px) + `app/apple-icon.png` from the BAM logo
+- [x] Migration: event `progress_updated`, photo kind `progress`, permission `repair.ticket.update_progress` (work roles + admin), matrix version bump
+- [x] #37 `POST /tickets/{id}/progress` + `allowedActions` `update_progress`; catalog / `PERM` / mocks
+- [x] S07: band button + latest update, timeline cards + dashed add button, dialog, history `โดย`, PDF rows + photos
+- [x] e2e `F21-cr059-progress-updates.spec.ts` written
+- [x] Migration `20261123000001` applied to the `frontend/.env` database (2026-11-23)
+- [x] Full e2e on the test stack (Docker test DB), owner acceptance 2026-11-24 (`repair-cr-059`)
+
 ## Decisions recorded with this plan (DECISIONS.md)
 
 - D-021 IDs are UUIDs (not guessable in URLs; tickets are shown by `ticketNo`)

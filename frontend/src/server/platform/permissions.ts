@@ -2,7 +2,7 @@ import "server-only";
 import { ApiError } from "./errors";
 // Catalog order matches the live Go registry (CR-006), including editable settings keys.
 export const permissionKeys = [
-  "repair.ticket.report", "repair.ticket.view_all", "repair.ticket.work", "repair.ticket.close_any",
+  "repair.ticket.report", "repair.ticket.view_all", "repair.ticket.work", "repair.ticket.update_progress", "repair.ticket.close_any",
   "repair.ticket.team_handle", "repair.ticket.handover_any", "repair.contractor.manage",
   "repair.overview.view", "repair.building3d.view", "car_booking.use", "room_booking.use",
   "settings.locations.manage", "settings.assets.manage", "settings.categories.manage",

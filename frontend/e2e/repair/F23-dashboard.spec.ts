@@ -6,6 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 // Runs against the real API (migration 20261020000001: อาคาร 1, 6 floors with traced rooms).
 // CR-027 (migration 20261029000002): S29 opens on the campus site view; อาคาร 2 (4 floors) opens like อาคาร 1.
 // CR-030 (migration 20261029000003): อาคาร 3 / 4, TrialMix, โรงอาหาร, ห้องประชุม 60 ปี open the same way.
+// CR-058 (migration 20261122000001): TrialMix switched off — no block, no marker.
 // CR-031 (migration 20261030000001): the nine Riverside buildings too (side 2).
 const auth = (role: string) => path.join(__dirname, "..", ".auth", `${role}.json`);
 const API = "/api/v1/repair";
@@ -135,7 +136,7 @@ test.describe("admin", () => {
     const site = page.locator(SITE);
     await expect(site.locator("canvas")).toBeVisible({ timeout: 60_000 });
     const overview = (await (await page.request.get(`${API}/admin/overview`)).json()).data;
-    expect(overview.site).toHaveLength(16);
+    expect(overview.site).toHaveLength(15); // CR-058: TrialMix's block (map no. 5) removed
     // CR-028: one side at a time
     const side1 = overview.site.filter((b: { side: number }) => b.side === 1).length;
     await expect(site.getByText(new RegExp(`^ฝั่งสำนักงานใหญ่ · ${side1} อาคาร · งานค้าง`))).toBeVisible();
@@ -199,7 +200,6 @@ test.describe("admin", () => {
   for (const [name, floors, room] of [
     ["อาคาร 3", 1, "RMC Excellence โรงซ่อมอุปกรณ์"],
     ["อาคาร 4", 2, "อ.4 ห้อง 101"],
-    ["อาคาร TrialMix และห้องทดสอบหินทราย", 1, "RMC METRO ห้องทดสอบหินทราย"],
     ["โรงอาหาร", 1, "พื้นที่ส่วนกลาง"],
     ["ห้องประชุม 60 ปี", 1, "ห้องละมาด"],
     // CR-031: the Riverside side

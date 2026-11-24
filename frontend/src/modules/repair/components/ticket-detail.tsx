@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { Tabs } from "radix-ui";
 import {
   CalendarClock, Camera, Check, ChevronRight, CircleCheck, CircleX, ClipboardList, Clock, Copy, FileDown, FileText, FolderCheck, Hourglass,
-  Image as ImageIcon, List, MapPin, RotateCcw, Star, UserRound, Wrench, X, type LucideIcon,
+  Image as ImageIcon, List, MapPin, Megaphone, MessageSquarePlus, Plus, RotateCcw, Star, UserRound, Wrench, X, type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PriorityBadge } from "@/components/shared/priority-indicator";
@@ -23,7 +23,7 @@ import { PhotoLightbox } from "./photo-gallery";
 import { useTicketActions } from "./ticket-actions";
 import { ticketReturnHref } from "./ticket-navigation";
 import { categoryName, dateTime, dayLabel, placeLine, PRIORITY_LABELS, RATING_LABELS, shortDate, STEP, stepLabel, ticketTitle, timeOf, workByText } from "./ticket-presentation";
-import { storyViewer, ticketStory, type Stage, type Story, type StoryViewer } from "./ticket-story";
+import { storyViewer, ticketStory, type Stage, type Story, type StoryItem, type StoryViewer } from "./ticket-story";
 import { TicketReport } from "./ticket-report";
 import { TicketRoomPlan } from "./ticket-room-plan";
 import { TicketFailure, TicketSkeleton } from "./ticket-ui";
@@ -35,6 +35,8 @@ import { useTicket } from "./use-ticket";
 // `allowedActions`), the job facts (where, category, symptoms, date, reporter / fixer), the repair evidence (what
 // the technician did, before / after photos, the report) and the blue vertical timeline on the right. Priority,
 // contractor and other staff-side facts show for technician / staff only; ticket-story drops staff-only events.
+// CR-059: technician / Admin post progress updates (band button + dashed button at the current stage); every viewer
+// reads them as cards in the timeline, and the newest one of the current work in the band.
 
 const STEP_ICON: Record<TicketStep, LucideIcon> = {
   awaiting_assessment: Clock, in_repair: Wrench, reworking: RotateCcw, awaiting_rating: Star, closed: FolderCheck,
@@ -88,7 +90,7 @@ function TicketBody({ ticket, onChanged, back }: { ticket: TicketDetail; onChang
             <ResultTab ticket={ticket} viewer={viewer} story={story} />
           </Tabs.Content>
         </Tabs.Root>
-        <Progress ticket={ticket} story={story} />
+        <Progress ticket={ticket} story={story} onUpdate={actions.allowed.has("update_progress") ? actions.updateProgress : undefined} />
       </div>
     </article>
     {/* CR-039: print / Save as PDF = the report template, not the screen. */}
@@ -286,6 +288,10 @@ function NextAction({ ticket, viewer, story, meId, actions }: { ticket: TicketDe
     } else { title = stepLabel(ticket); desc = line[ticket.step]; }
   }
 
+  // CR-059: post a progress update (technician / Admin, in repair or reworking) — before the step's own buttons.
+  if (actions.allowed.has("update_progress")) buttons.unshift(outline("อัปเดตความคืบหน้า", MessageSquarePlus, actions.updateProgress));
+  const latest = story.latestUpdate;
+
   // F08-B: admin can close any open ticket, whatever their relation to it (BR-F08B-1).
   if (actions.allowed.has("handover")) buttons.push(<Button key="handover" type="button" variant="outline" className="min-h-11 max-sm:w-full" onClick={actions.handover}>ส่งต่อให้ช่าง</Button>);
   if (actions.allowed.has("close")) buttons.push(<Button key="close" type="button" variant="outline" onClick={actions.close}
@@ -303,6 +309,7 @@ function NextAction({ ticket, viewer, story, meId, actions }: { ticket: TicketDe
           <CalendarClock className="size-4 shrink-0" aria-hidden />คาดว่าจะเสร็จ <b className="font-semibold">{promise}</b></p>}
         <p className="mt-1.5 max-w-160 text-[13px] leading-5 text-pretty text-primary-foreground/88">{desc}</p>
         {note && <p className="mt-1.5 text-[13px] leading-5 font-medium">{note}</p>}
+        {latest && <LatestUpdate item={latest} hero />}
         {buttons.length > 0 && <div className="mt-3.5 flex flex-wrap items-center gap-2">{buttons}</div>}
       </div>
     </div>
@@ -318,9 +325,28 @@ function NextAction({ ticket, viewer, story, meId, actions }: { ticket: TicketDe
       <h2 className="text-base leading-6 font-semibold">{title}</h2>
       <p className="mt-0.5 max-w-160 text-sm leading-5.5 text-muted-foreground">{desc}</p>
       {note && <p className={cn("mt-1.5 text-[13px] leading-5", note === moved ? "font-medium text-status-rework" : "text-muted-foreground")}>{note}</p>}
+      {latest && <LatestUpdate item={latest} />}
       {buttons.length > 0 && <div className="mt-3.5 flex flex-wrap items-center gap-2">{buttons}</div>}
     </div>
   </div>;
+}
+
+/** CR-059: the newest progress update of the current work, in the band; jumps to the timeline where all of them are. */
+function LatestUpdate({ item, hero }: { item: StoryItem; hero?: boolean }) {
+  const photos = item.photos?.length ?? 0;
+  return <a href="#ticket-progress" className={cn("group mt-3 flex max-w-160 items-start gap-2.5 rounded-lg px-3 py-2.5 outline-none transition-colors focus-visible:ring-2 motion-reduce:transition-none",
+    hero ? "bg-primary-foreground/14 hover:bg-primary-foreground/20 focus-visible:ring-primary-foreground" : "border bg-card hover:border-primary/40 focus-visible:ring-ring")}>
+    <Megaphone className={cn("mt-0.5 size-4 shrink-0", !hero && "text-primary")} aria-hidden />
+    <span className="min-w-0 flex-1">
+      <span className={cn("block text-xs leading-5", hero ? "text-primary-foreground/88" : "text-muted-foreground")}>
+        <b className={cn("font-semibold", hero ? "text-primary-foreground" : "text-foreground")}>อัปเดตล่าสุด</b> · {dateTime(item.at)} · {item.by}</span>
+      <span className="mt-0.5 line-clamp-2 text-sm leading-5.5 wrap-break-word">{item.detail}</span>
+      {photos > 0 && <span className={cn("mt-0.5 flex items-center gap-1 text-xs leading-5", hero ? "text-primary-foreground/88" : "text-muted-foreground")}>
+        <ImageIcon className="size-3.5" aria-hidden />แนบรูป {photos} รูป</span>}
+    </span>
+    {/* Phones keep only the chevron so the date and the name stay on one line. */}
+    <span className={cn("mt-0.5 flex shrink-0 items-center text-xs font-medium", hero ? "text-primary-foreground/88" : "text-primary")}><span className="max-sm:sr-only">ดูทั้งหมด</span><ChevronRight className="size-4 sm:size-3.5" aria-hidden /></span>
+  </a>;
 }
 
 function closedLine(ticket: TicketDetail) {
@@ -509,14 +535,16 @@ function PhotoSet({ title, from, photos, empty, pending }: { title: string; from
 
 // ---- ความคืบหน้างาน (vertical timeline) ----
 
-function Progress({ ticket, story }: { ticket: TicketDetail; story: Story }) {
+function Progress({ ticket, story, onUpdate }: { ticket: TicketDetail; story: Story; onUpdate?: () => void }) {
   const [history, setHistory] = useState(false);
   // CR-052: only stages that happened or are happening now — future ("later") stages are not listed.
   const stages = story.stages.filter((s) => s.state !== "later");
-  return <section aria-labelledby="progress-title" className="min-w-0 border-t px-4 py-5 sm:px-7 lg:border-t-0 lg:border-l lg:px-6">
+  // CR-059: the add button sits at the end of the stage the work is in now, where the new update will appear.
+  const working = (s: Stage) => s.state === "now" && (s.key === "work" || s.key === "rework");
+  return <section id="ticket-progress" aria-labelledby="progress-title" className="min-w-0 scroll-mt-20 border-t px-4 py-5 sm:px-7 lg:border-t-0 lg:border-l lg:px-6">
     <h2 id="progress-title" className="text-lg leading-7 font-semibold">ความคืบหน้าของงาน</h2>
     <p className="text-[13px] text-muted-foreground">ตั้งแต่แจ้งเรื่อง จนถึงปิดงาน</p>
-    <ol className="mt-5">{stages.map((s, i) => <StageItem key={s.key} stage={s} next={stages[i + 1]} />)}</ol>
+    <ol className="mt-5">{stages.map((s, i) => <StageItem key={s.key} stage={s} next={stages[i + 1]} onUpdate={onUpdate && working(s) ? onUpdate : undefined} />)}</ol>
     <Button type="button" variant="outline" className="mt-4 h-11 w-full" onClick={() => setHistory(true)}><List aria-hidden />ดูประวัติทั้งหมด</Button>
     <Dialog open={history} onOpenChange={setHistory}>
       <DialogContent showCloseButton={false} className="max-h-[88dvh] overflow-y-auto sm:max-w-140">
@@ -529,7 +557,7 @@ function Progress({ ticket, story }: { ticket: TicketDetail; story: Story }) {
   </section>;
 }
 
-function StageItem({ stage: s, next }: { stage: Stage; next?: Stage }) {
+function StageItem({ stage: s, next, onUpdate }: { stage: Stage; next?: Stage; onUpdate?: () => void }) {
   const rework = s.key === "rework";
   const time = s.time;
   return <li aria-current={s.state === "now" ? "step" : undefined} className={cn("relative grid grid-cols-[1.75rem_minmax(0,1fr)] gap-x-3.5", next && "pb-6")}>
@@ -554,11 +582,28 @@ function StageItem({ stage: s, next }: { stage: Stage; next?: Stage }) {
       </h3>
       {s.desc && <p className={cn("mt-0.5 text-sm leading-5.5 wrap-break-word", s.state === "later" ? "text-muted-foreground/90" : "text-muted-foreground")}>{s.desc}</p>}
       {s.photos && <EventPhotos photos={s.photos} />}
-      {s.sub.length > 0 && <ul className="mt-2 grid gap-1.5 border-l border-border pl-3">{s.sub.map((e) => <li key={e.id} className={cn("text-[13px] leading-5", e.warn ? "text-status-rework" : "text-muted-foreground")}>
-        <b className="font-semibold">{e.title}</b>{e.detail && ` · ${e.detail}`}<time className="block text-xs opacity-80">{dateTime(e.at)}</time>
-        {e.photos && <EventPhotos photos={e.photos} />}
-      </li>)}</ul>}
+      {s.sub.length > 0 && <ul className="mt-2 grid gap-2 border-l border-border pl-3">{s.sub.map((e) => e.kind === "progress" ? <ProgressCard key={e.id} item={e} />
+        : <li key={e.id} className={cn("text-[13px] leading-5", e.warn ? "text-status-rework" : "text-muted-foreground")}>
+          <b className="font-semibold">{e.title}</b>{e.detail && ` · ${e.detail}`}<time className="block text-xs opacity-80">{dateTime(e.at)}</time>
+          {e.photos && <EventPhotos photos={e.photos} />}
+        </li>)}</ul>}
+      {onUpdate && <button type="button" onClick={onUpdate}
+        className="mt-3 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/45 bg-secondary/30 px-3 text-sm font-semibold text-primary outline-none transition-colors hover:bg-secondary/70 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
+        <Plus className="size-4" aria-hidden />เพิ่มอัปเดตความคืบหน้า</button>}
     </div>
+  </li>;
+}
+
+/** CR-059: one progress update — tag + time, the message as body text, photos, who posted it. */
+function ProgressCard({ item }: { item: StoryItem }) {
+  return <li className="rounded-lg border bg-card px-3 py-2.5">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs leading-5">
+      <span className="inline-flex items-center gap-1 rounded-[5px] bg-secondary px-1.5 font-semibold text-secondary-foreground"><Megaphone className="size-3.5" aria-hidden />{item.title}</span>
+      <time className="text-muted-foreground">{dateTime(item.at)}</time>
+    </p>
+    <p className="mt-1.5 text-sm leading-5.5 whitespace-pre-wrap wrap-break-word">{item.detail}</p>
+    {item.photos && <EventPhotos photos={item.photos} />}
+    <p className="mt-1.5 text-xs leading-5 text-muted-foreground">โดย {item.by}</p>
   </li>;
 }
 
@@ -576,6 +621,7 @@ function EventPhotos({ photos }: { photos: Photo[] }) {
 function HistoryTable({ story, ticketNo }: { story: Story; ticketNo: string }) {
   return <table className="w-full border-collapse text-sm"><caption className="sr-only">ประวัติงาน {ticketNo}</caption><tbody>{story.history.map((e) => <tr key={e.id} className="border-b align-top last:border-0">
     <td className="w-32 py-2.5 pr-3 text-xs text-muted-foreground tabular-nums">{dateTime(e.at, true)}</td>
-    <td className="py-2.5"><b className="font-semibold">{e.title}</b>{e.detail && <small className="block text-[13px] text-muted-foreground">{e.detail}</small>}{e.photos && <EventPhotos photos={e.photos} />}</td>
+    <td className="py-2.5"><b className="font-semibold">{e.title}</b>{e.detail && <small className="block text-[13px] whitespace-pre-wrap text-muted-foreground">{e.detail}</small>}
+      {e.by && <small className="block text-xs text-muted-foreground">โดย {e.by}</small>}{e.photos && <EventPhotos photos={e.photos} />}</td>
   </tr>)}</tbody></table>;
 }

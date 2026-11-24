@@ -108,6 +108,7 @@ const P = {
   report: "repair.ticket.report",
   viewAll: "repair.ticket.view_all",
   work: "repair.ticket.work",
+  updateProgress: "repair.ticket.update_progress", // CR-059
   closeAny: "repair.ticket.close_any",
   teamHandle: "repair.ticket.team_handle",
   handoverAny: "repair.ticket.handover_any",
@@ -146,6 +147,7 @@ export const mockPermissionSystems: PermissionSystem[] = [
         permissions: [
           { key: P.viewAll, label: "ดูทุกงาน", description: "เห็นงานซ่อมทุกงาน รวมชื่อและคะแนนช่างภายนอก", requires: null },
           { key: P.work, label: "ดำเนินการและบันทึกผลซ่อม", description: "งานซ่อมทุกงานส่งถึง role นี้ ประเมินวันคาดว่าเสร็จ และบันทึกผลซ่อม", requires: null },
+          { key: P.updateProgress, label: "อัปเดตความคืบหน้างาน", description: "ส่งข้อความและรูปความคืบหน้าระหว่างซ่อม ผู้แจ้งและผู้ติดตามเห็นในหน้างาน", requires: null },
           { key: P.closeAny, label: "ปิดงานใดก็ได้", description: "ปิดงานได้โดยไม่ต้องรอผู้แจ้งตรวจรับ", requires: null },
         ],
       },
@@ -213,9 +215,9 @@ const SEEDED_STORED: Record<string, string[]> = {
   employee: [...SERVICES],
   housekeeper_lead: [...SERVICES, P.teamHandle],
   security_lead: [...SERVICES, P.teamHandle],
-  technician: [P.viewAll, P.work, P.contractor],
-  admin: [...SERVICES, P.viewAll, P.closeAny, P.handoverAny, P.overview, P.building3d, ...SETTINGS],
-  [MOCK_CUSTOM_ROLE]: [...SERVICES, P.viewAll, P.work, P.closeAny],
+  technician: [P.viewAll, P.work, P.updateProgress, P.contractor],
+  admin: [...SERVICES, P.viewAll, P.updateProgress, P.closeAny, P.handoverAny, P.overview, P.building3d, ...SETTINGS],
+  [MOCK_CUSTOM_ROLE]: [...SERVICES, P.viewAll, P.work, P.updateProgress, P.closeAny],
 };
 
 /** Effective keys in catalog order: super_admin all; others their stored keys (no group is fixed since CR-006). */

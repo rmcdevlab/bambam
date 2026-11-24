@@ -16,7 +16,8 @@ export async function getContractors(u:User,url:URL,id?:string,jobs=false) {
  return list(jobs?rs.map(r=>({ticketId:r.id,ticketNo:r.ticket_no,status:r.status,category:{id:r.category_id??nil,name:r.category_name},resolvedAt:r.resolved_at,contractorRating:r.contractor_rating,contractorRatingComment:r.contractor_rating_comment,reporterRating:r.rating})):await Promise.all(rs.map(r=>contractor(r))),args,count.count);
 }
 export async function saveContractor(u:User,id:string|null,b:Row) {
- permit(u.permissions,"repair.contractor.manage");const resultId=id??randomUUID(),name=text(b.name,"name",100,true).replace(/\s+/g," "),typeIds=ids(b.typeIds,"typeIds",1),contact=text(b.contactName,"contactName",100),phone=text(b.phone,"phone",30),note=text(b.note,"note",500);
+ if(!u.permissions.includes("repair.contractor.manage"))fail("NOT_TECHNICIAN","forbidden"); // contract #16 / #17: error code kept from the role era (settings 03-plan)
+ const resultId=id??randomUUID(),name=text(b.name,"name",100,true).replace(/\s+/g," "),typeIds=ids(b.typeIds,"typeIds",1),contact=text(b.contactName,"contactName",100),phone=text(b.phone,"phone",30),note=text(b.note,"note",500);
  await transaction(async db=>{
   await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",["contractor:"+name.toLowerCase()]);
   if(id)await one("repair.GetContractor",{id},db,"CONTRACTOR_NOT_FOUND");
@@ -27,7 +28,8 @@ export async function saveContractor(u:User,id:string|null,b:Row) {
  });return contractor(await one("repair.GetContractor",{id:resultId}));
 }
 export async function createType(u:User,b:Row) {
- permit(u.permissions,"repair.ticket.work","repair.contractor.manage");const name=text(b.name,"name",50,true).replace(/\s+/g," ");return transaction(async db=>{
+ if(!["repair.ticket.work","repair.contractor.manage"].some(k=>u.permissions.includes(k)))fail("NOT_TECHNICIAN","forbidden"); // contract #14, D-113
+ const name=text(b.name,"name",50,true).replace(/\s+/g," ");return transaction(async db=>{
  await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",["contractor_type:"+name.toLowerCase()]);
  const found=(await rows("repair.GetContractorTypeByName",{name},db))[0];if(found){if(!found.is_active){await query("repair.ReactivateContractorType",{id:found.id,actor_id:u.id},db);await audit(db,u,"activate","contractor_type",found.id,found.name); }return {id:found.id,name:found.name};}
  const created=await one("repair.InsertContractorType",{name,created_by_id:u.id},db);await audit(db,u,"create","contractor_type",created.id,created.name);return created;

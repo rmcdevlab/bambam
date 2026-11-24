@@ -34,6 +34,12 @@
             "requires": null
           },
           {
+            "key": "repair.ticket.update_progress",
+            "label": "อัปเดตความคืบหน้างาน",
+            "description": "ส่งข้อความและรูปความคืบหน้าระหว่างซ่อม ผู้แจ้งและผู้ติดตามเห็นในหน้างาน",
+            "requires": null
+          },
+          {
             "key": "repair.ticket.close_any",
             "label": "ปิดงานใดก็ได้",
             "description": "ปิดงานได้โดยไม่ต้องรอผู้แจ้งตรวจรับ",

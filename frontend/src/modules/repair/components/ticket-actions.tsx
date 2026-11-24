@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, HardHat, Info, Loader2, Phone, Plus, Star, Tags, UserRound, Wrench } from "lucide-react";
+import { AlertCircle, ArrowRight, Eye, HardHat, Info, Loader2, Phone, Plus, Send, Star, Tags, UserRound, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/shared/confirm-action";
 import { useCurrentUser } from "@/components/shared/me-provider";
@@ -14,8 +14,8 @@ import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { assessTicket, closeTicket, confirmTicket, getAllContractors, getTechnicians, getTicket, handoverTicket, sendBackTicket } from "../api";
-import { assessFieldMessages, errorCode, errorMessage, fieldErrors, handoverFieldMessages, reviewFieldMessages } from "../errors";
+import { assessTicket, closeTicket, confirmTicket, getAllContractors, getTechnicians, getTicket, handoverTicket, sendBackTicket, updateProgress } from "../api";
+import { assessFieldMessages, errorCode, errorMessage, fieldErrors, handoverFieldMessages, progressFieldMessages, reviewFieldMessages } from "../errors";
 import type { Contractor, StaffRef, TicketDetail, WorkBy } from "../types";
 import { ContractorFormDialog } from "./contractors";
 import { forgetUploads, photoBlocker, PhotoPicker, uploadKeptPhotos, type PhotoItem } from "./photo-picker";
@@ -26,8 +26,9 @@ import { addDays, dayLabel, RATING_LABELS, shortDate, ticketLocation, ticketTitl
 // next-action card opens these: technician → เริ่มดำเนินการ / เลื่อนวันเสร็จ (S17), บันทึกผลซ่อม (S10 sheet)
 //                               reporter   → ประเมินตรวจงาน (S08, empty stars or the star tapped) / ส่งกลับให้แก้
 //                               admin      → ปิดงาน (F08-B, Stage 3; also on S11)
+// CR-059: technician / Admin → อัปเดตความคืบหน้า (message + photos) while the job is in repair or reworking.
 
-type Open = { kind: "assess" } | { kind: "confirm"; score: number } | { kind: "send_back" } | { kind: "resolve" } | { kind: "close" } | { kind: "handover" } | null;
+type Open = { kind: "assess" } | { kind: "confirm"; score: number } | { kind: "send_back" } | { kind: "resolve" } | { kind: "close" } | { kind: "handover" } | { kind: "progress" } | null;
 
 export function useTicketActions(ticket: TicketDetail, onChanged: (t: TicketDetail) => void, opts: { awaitingReaccept: boolean }) {
   const [open, setOpen] = useState<Open>(null);
@@ -57,6 +58,8 @@ export function useTicketActions(ticket: TicketDetail, onChanged: (t: TicketDeta
     {allowed.has("close") && <CloseTicketDialog ticket={ticket} open={open?.kind === "close"} onOpenChange={close} onDone={(t) => done(t, CLOSED_TOAST)} />}
     {allowed.has("handover") && open?.kind === "handover" && <HandoverDialog ticket={ticket} open onOpenChange={close}
       onDone={t => done(t, "ส่งต่อให้ช่างแล้ว")} onStale={() => { setOpen(null); getTicket(ticket.id).then(onChanged, err => toast.error(errorMessage(err))); }} />}
+    {allowed.has("update_progress") && <ProgressDialog ticket={ticket} open={open?.kind === "progress"} onOpenChange={close}
+      onDone={(t) => done(t, "ส่งอัปเดตแล้ว ผู้แจ้งเห็นในหน้างานแล้ว")} onStale={() => { setOpen(null); getTicket(ticket.id).then(onChanged, err => toast.error(errorMessage(err))); }} />}
   </>;
   return {
     allowed,
@@ -66,6 +69,7 @@ export function useTicketActions(ticket: TicketDetail, onChanged: (t: TicketDeta
     sendBack: () => setOpen({ kind: "send_back" }),
     close: () => setOpen({ kind: "close" }),
     handover: () => setOpen({ kind: "handover" }),
+    updateProgress: () => setOpen({ kind: "progress" }),
     dialogs,
   };
 }
@@ -389,6 +393,81 @@ function SendBackDialog({ ticket, open, onOpenChange, onDone }: DialogProps) {
           <FieldError id="photoIds-error" message={errors.photoIds} /></div>
         <DialogFooter className="gap-2"><DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
           <Button type="submit" disabled={busy}>{busy && <Loader2 className="animate-spin" aria-hidden />}{sending || "ส่งกลับให้แก้"}</Button></DialogFooter>
+      </form>
+      {confirmDialog}
+    </DialogContent>
+  </FormDialog>;
+}
+
+// ---- อัปเดตความคืบหน้า (CR-059): message required (1–500), photos optional (0–5); everyone who sees the ticket reads it ----
+
+function ProgressDialog({ ticket, open, onOpenChange, onDone, onStale }: DialogProps & { onStale: () => void }) {
+  const [confirm, confirmDialog] = useConfirm();
+  const [note, setNote] = useState("");
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  /** `กำลังส่งรูป {n}/{m}…` while the submit uploads the kept photos (CR-026 A1). */
+  const [sending, setSending] = useState("");
+  const reset = () => { setNote(""); setPhotos([]); setErrors({}); };
+  const rework = ticket.step === "reworking";
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const local: Record<string, string> = {};
+    if (!note.trim()) local.note = "กรุณาเขียนความคืบหน้า";
+    const wait = photoBlocker(photos);
+    if (wait) local.photoIds = wait;
+    if (Object.keys(local).length) { setErrors(local); if (local.note) document.getElementById("progress-note")?.focus(); return; }
+    // CR-044: confirm before sending — an update cannot be edited or deleted afterwards.
+    if (!(await confirm({ title: "ส่งอัปเดตความคืบหน้า?", description: "ผู้แจ้งและผู้ติดตามจะเห็นทันที แก้ไขหรือลบภายหลังไม่ได้", action: "ส่งอัปเดต" }))) return;
+    setBusy(true); setErrors({});
+    let photoIds: string[];
+    try {
+      // CR-026 A1: the photos go up only now (#3), then #37 attaches them.
+      [photoIds] = await uploadKeptPhotos([{ items: photos, onChange: setPhotos }], (n, m) => setSending(`กำลังส่งรูป ${n}/${m}…`));
+    } catch {
+      setErrors({ photoIds: "ส่งไม่สำเร็จ ลองอีกครั้ง" }); setSending(""); setBusy(false); return;
+    }
+    setSending("");
+    try { onDone(await updateProgress(ticket.id, { note: note.trim(), photoIds })); reset(); }
+    catch (err) {
+      if (errorCode(err) === "PHOTO_NOT_FOUND") setPhotos(forgetUploads);
+      const fields = fieldErrors(err, progressFieldMessages);
+      if (Object.keys(fields).length) setErrors(fields);
+      else {
+        toast.error(errorMessage(err));
+        // The job moved on (result recorded, closed) or the right was taken away: refresh S07 so the button goes.
+        if (["TICKET_CLOSED", "INVALID_STATE", "FORBIDDEN"].includes(errorCode(err) ?? "")) { reset(); onStale(); }
+      }
+    }
+    finally { setBusy(false); }
+  }
+  return <FormDialog open={open} onOpenChange={(o) => { if (busy) return; if (!o) reset(); onOpenChange(o); }}>
+    <DialogContent className={sheetLike}>
+      <form onSubmit={submit} noValidate className="space-y-5">
+        <DialogHeader><DialogTitle className="text-lg">อัปเดตความคืบหน้า</DialogTitle>
+          <DialogDescription>{rework ? "บอกผู้แจ้งว่าการแก้ไขตามที่ส่งกลับไปถึงไหนแล้ว" : "บอกผู้แจ้งว่างานซ่อมไปถึงไหนแล้ว เช่น สั่งอะไหล่ รอช่างภายนอก หรือซ่อมไปแล้วบางส่วน"}</DialogDescription></DialogHeader>
+        <div className="space-y-2">
+          <label htmlFor="progress-note" className="flex items-baseline justify-between gap-2 text-[15px] font-semibold">
+            <span>ความคืบหน้าล่าสุด <span className="text-destructive">*</span></span>
+            <span className="text-xs font-normal text-muted-foreground tabular-nums">{note.length}/500</span>
+          </label>
+          <Textarea id="progress-note" value={note} onChange={(e) => { setNote(e.target.value); setErrors((x) => { const n = { ...x }; delete n.note; return n; }); }} maxLength={500} rows={4}
+            placeholder="เช่น สั่งอะไหล่คอมเพรสเซอร์แล้ว คาดว่าของถึงวันพฤหัส จะเข้าเปลี่ยนให้ทันที" aria-invalid={!!errors.note} aria-describedby="progress-note-error"
+            className="min-h-28 rounded-sm bg-card px-3.5 py-2.5 text-base" />
+          <FieldError id="progress-note-error" message={errors.note} />
+        </div>
+        <div className="space-y-2">
+          <p className="text-[15px] font-semibold">รูปประกอบ <span className="text-xs font-normal text-muted-foreground">ไม่บังคับ · สูงสุด 5 รูป</span></p>
+          <PhotoPicker value={photos} onChange={setPhotos} disabled={busy} invalid={!!errors.photoIds} id="progress-photos" describedBy="progress-photos-error progress-photo-hint" />
+          <p id="progress-photo-hint" className="text-[13px] text-muted-foreground">เช่น จุดที่กำลังซ่อม อะไหล่ที่สั่ง หรือสภาพหน้างานตอนนี้</p>
+          <FieldError id="progress-photos-error" message={errors.photoIds} />
+        </div>
+        <p className="flex items-start gap-2 rounded-lg bg-secondary/60 px-3 py-2.5 text-[13px] leading-5 text-secondary-foreground">
+          <Eye className="mt-0.5 size-4 shrink-0" aria-hidden />ผู้แจ้งและผู้ติดตามจะเห็นข้อความและรูปนี้ใน &ldquo;ความคืบหน้าของงาน&rdquo; ส่งแล้วแก้ไขหรือลบไม่ได้</p>
+        <DialogFooter className="gap-2"><DialogClose asChild><Button type="button" variant="outline" disabled={busy}>ยกเลิก</Button></DialogClose>
+          <Button type="submit" disabled={busy}>{busy ? <Loader2 className="animate-spin" aria-hidden /> : <Send aria-hidden />}{sending || "ส่งอัปเดต"}</Button></DialogFooter>
       </form>
       {confirmDialog}
     </DialogContent>

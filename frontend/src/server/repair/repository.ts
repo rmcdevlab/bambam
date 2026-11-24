@@ -25,6 +25,8 @@ export async function detail(id:string,u:User,db?:DB) {
  const byEvent=(eventId:string)=>photos.filter(p=>p.event_id===eventId).map(p=>photo(p.photo_id));
  const actions:string[]=[],blocked:Record<string,string>={};
  if(r.status==="in_progress"&&u.permissions.includes("repair.ticket.work")){actions.push("assess");if(r.expected_done_on&&r.work_by)actions.push("resolve");else blocked.resolve="ASSESSMENT_REQUIRED";}
+ // CR-059: progress updates while in repair or reworking (assessed, not yet resolved).
+ if(r.status==="in_progress"&&r.expected_done_on&&u.permissions.includes("repair.ticket.update_progress"))actions.push("update_progress");
  if(r.status==="resolved"&&r.reporter_id===u.id)actions.push("confirm","send_back");
  if(r.status!=="closed"&&u.permissions.includes("repair.ticket.close_any"))actions.push("close");
  if(r.closed_reason==="team_handled"&&(u.permissions.includes("repair.ticket.handover_any")||(r.reporter_id===u.id&&u.permissions.includes("repair.ticket.team_handle"))))actions.push("handover");

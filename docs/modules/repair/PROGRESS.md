@@ -1,9 +1,10 @@
 # Repair — Progress
 
-**Phase:** P5 Build · **Product stage:** 6 of 8 next · **Updated:** 2026-11-22
+**Phase:** P5 Build · **Product stage:** 6 of 8 next · **Updated:** 2026-11-24
 
 ## Now
 
+- CR-059 (accepted 2026-11-24, `repair-cr-059`): (1) favicon / apple-icon = BAM logo tile; (2) S07 progress updates — technician / Admin post a message (required) + 0–5 photos while in repair / reworking; cards in the timeline, latest one in the band, band button + dashed timeline button, dialog with confirm; PDF prints them. New permission `repair.ticket.update_progress`, migration `20261123000001` (applied 2026-11-23 to the database in `frontend/.env`; permission seeded to admin, super_admin, technician), endpoint #37. Typecheck / lint pass; mock-mode screenshots checked (technician, reporter, admin; desktop + phone); 2026-11-23 fix: `POST tickets/:id/progress` added to the route allowlist (`src/server/platform/routes.ts`; it returned 404 before); `F21-cr059-progress-updates.spec.ts` 4/4 pass (desktop + mobile) on the Docker test DB.
 - CR-057 (approved 2026-11-22): every unsaved-changes warning uses the browser dialog, on every form and form dialog (shared `use-unsaved-guard.ts` + `form-dialog.tsx`). Code, docs, e2e updated; typecheck/lint/build pass; e2e not run (no test DB here). Owner accepted 2026-11-22 (`repair-cr-057`).
 - CR-058 (accepted 2026-11-22, `repair-cr-058`): S29 office-side decorative structures removed; อาคาร TrialMix switched off (migration `20261122000001` applied 2026-11-22 to the database in `frontend/.env`).
 - 2026-11-22 S29 mascot follow-up (6.8 s and amendment 2 order kept): 72 poses restored at 362×362 px each (v4 was blurry at 148×148), six native-resolution `bam-mascot-admin-hd-v5-{1..6}.webp` sheets, 3.41 MB total; generation prompts in `frontend/scripts/assets/admin-mascot-v5.json`. All sheets decode before playback; 24 ms overlaps keep eyes/stripes crisp instead of full-interval ghosting. Previous compositor card flight, body lean and deferred WebGL scene retained. Desktop/mobile mock browser checks at 2× pixel density play all 72 frames across all six sheets; reduced motion and one-sheet decode failure pass; visual comparison confirms sharper detail. Lint/typecheck/build pass (existing photo-storage build warnings); no shared code changed. Scroll-away/motion-change/hidden-tab checks passed before this HD follow-up. Waiting for owner review; not deployed.
@@ -31,6 +32,10 @@
 
 ## Open issues
 
+- e2e repair 2026-11-23 (owner: fix every failing test): app fixes — `POST contractors` / `PUT contractors/:id` / `POST contractor-types` return 403 `NOT_TECHNICIAN` again (contract #14/#16/#17; the Node port had `FORBIDDEN`); S06 phone cards show `· ทีมแก้เอง` / `คุณติดตามเคสนี้` after the ticket no. like the table (CR-021). Test fixes — F23 site = 15 blocks, no TrialMix (CR-058; its CR wrongly said no test referenced it); F31 scrolls the plan into view, waits for the chip to settle, moves into ท่าหลวง 3; F21 waits for the ช่างผู้รับผิดชอบ list (CR-034) before submitting; `fillPlace` uses `submitReady` and waits 30 s for S03's first compile. Known flaky under 4 workers (pass on retry, CI has `retries: 1`): F06 BR-F06-2 ordering (shared demo reporter), F30 AC5. Reset `bambam_e2e` when it grows (~500 tickets per full run slow the duplicate check).
+- Local e2e: machine Node is 20.11.1 but `scripts/test-env.cjs` needs `util.parseEnv` (package engines ≥20.18.1); tests ran with a scratch parseEnv shim via `NODE_OPTIONS`. Upgrade Node to ≥20.18.1 (22 LTS) to run `npm test` directly.
+- CR-059: migration `20261123000001` applied to the `frontend/.env` database (2026-11-23); the release deploy runs migrations on its own database; `/atlas sync repair` still to do.
+- `npm run db:generate` on a Windows checkout with CRLF SQL files rewrites every query in `queries.json` with `\r\n`; CR-059 regenerated with LF-normalized input (only `TouchTicket` added).
 - CR-057: run full e2e on the test stack; iOS Safari shows no refresh / tab-close warning (browser limit).
 - Complete authenticated browser workflows were not run against production. Two database integration suites were skipped because CR056_TEST_DATABASE_URL was not configured; no production test data was created.
 - Existing photo files are unavailable; replacement uploads are deferred by the owner.

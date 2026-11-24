@@ -176,7 +176,7 @@ function Board({ filters, relation, onReset, toolbar, onPage }: BoardProps) {
               : filters.q || filters.status !== "all" ? { hint: filters.q ? `ไม่พบงานที่ตรงกับ "${filters.q}"` : "ไม่พบงานตามตัวกรองนี้", action: <Button variant="outline" onClick={onReset}><RotateCcw aria-hidden />ล้างตัวกรอง</Button> }
               : { hint: relation.value === "following" ? "ยังไม่มีงานที่คุณติดตาม" : "ยังไม่มีงานที่คุณแจ้ง" }}
             rowClassName={(t) => t.awaitingMyConfirmation ? "bg-attention/4 [&>td:first-child]:border-l-3 [&>td:first-child]:border-l-attention" : undefined}
-            card={(t) => { const due = dueText(t); return <TicketCard ticket={t} caption={statusCaption(t)} highlight={t.awaitingMyConfirmation} action={<OpenLink ticket={t} />}
+            card={(t) => { const due = dueText(t); return <TicketCard ticket={t} note={titleNote(t)} caption={statusCaption(t)} highlight={t.awaitingMyConfirmation} action={<OpenLink ticket={t} />}
               meta={<>{due.label} <span className={due.muted ? "" : "font-semibold text-foreground"}>{due.value}</span> · อัปเดต <time dateTime={t.updatedAt}>{listDate(t.updatedAt)}</time></>} />; }} />
           {result.items.length > 0 && <ListFooter page={filters.page} pageSize={PAGE_SIZE} total={total} unit="งาน" onPage={onPage} />}
         </>}

@@ -160,7 +160,7 @@ S12's floor ticket list reuses #6 (`scope=all&floorId=…&status=in_progress,res
 ```
 
 - `asset`, `result` may be `null`. `result` is the latest resolution; earlier ones stay in the timeline (`resolved` events with their photos). `contractorRating` / `contractorRatingComment` are staff-only (`null` for others).
-- `allowedActions` values: `assess` · `resolve` (technician, `in_progress`) · `confirm` · `send_back` (reporter, `resolved`) · later: `handover` · `close` (CR-015: no `change_priority`).
+- `allowedActions` values: `assess` · `resolve` (technician, `in_progress`) · `confirm` · `send_back` (reporter, `resolved`) · later: `handover` · `close` (CR-015: no `change_priority`) · (CR-059) `update_progress` (caller has `repair.ticket.update_progress`, ticket `in_progress` with an expected date = steps `in_repair` / `reworking`) → #37.
 - `blockedActions`: `{ "resolve": "ASSESSMENT_REQUIRED" }` while the technician has not assessed yet (no expected date or no `workBy`) → disabled "บันทึกผลซ่อม" + helper.
 
 ### `TimelineEvent`
@@ -176,7 +176,7 @@ S12's floor ticket list reuses #6 (`scope=all&floorId=…&status=in_progress,res
 }
 ```
 
-`type` → S07 label: `created` · `subscribed` · `assessed` / `assessment_changed` (`data.expectedDoneOn`, `data.workBy`) · `resolved` (`note` = result, photos = result photos) · `sent_back` (`note` = reason, photos) · `confirmed` (`data.rating`, `note` = comment) · `auto_closed` · `team_handled` · `handed_over` · `admin_closed`  (CR-015: no `priority_changed`; existing rows, if any, stay readable).
+`type` → S07 label: `created` · `subscribed` · `assessed` / `assessment_changed` (`data.expectedDoneOn`, `data.workBy`) · `resolved` (`note` = result, photos = result photos) · `sent_back` (`note` = reason, photos) · `confirmed` (`data.rating`, `note` = comment) · `auto_closed` · `team_handled` · `handed_over` · `admin_closed`  (CR-015: no `priority_changed`; existing rows, if any, stay readable) · (CR-059) `progress_updated` (`note` = the message, photos = its photos; every viewer).
 
 ---
 
@@ -385,6 +385,18 @@ Request `{ "rating": 4, "comment": "ช่างมาไว และอธิ�
 Request `{ "reason": "ยังมีน้ำหยดตอนเปิดแอร์เกิน 1 ชั่วโมง", "photoIds": [] }` (reason 1–500 required, photos 0–5) → `in_progress`, `sendBackCount` + 1, step `reworking`; event `sent_back` with the reason and photos. The tracker moves forward (ส่งกลับให้แก้ → แก้ไขเสร็จ), it does not go back (CR-005).
 
 Errors: 400 `VALIDATION_FAILED` (`reason` REQUIRED → กรุณาบอกสิ่งที่ยังไม่เรียบร้อย), 403 `NOT_REPORTER`, 409 `TICKET_CLOSED`, 409 `INVALID_STATE`, 422 `PHOTO_NOT_FOUND`.
+
+### 37. POST /api/v1/repair/tickets/{id}/progress (CR-059)
+Request `{ "note": "สั่งอะไหล่คอมเพรสเซอร์แล้ว คาดว่าของถึงวันพฤหัส", "photoIds": ["e1…"] }` — `note` 1–500 **required**, photos 0–5 (uploaded by the caller, #3). Caller needs `repair.ticket.update_progress` and must be able to see the ticket (#8). Allowed while `in_progress` **after** the assessment (steps `in_repair`, `reworking`). Writes event `progress_updated` (`note`, photos kind `progress`) and touches the ticket's `updatedAt`; no status change. → 200 `<TicketDetail>`.
+
+| Status | code | When | Thai message |
+|---|---|---|---|
+| 400 | `VALIDATION_FAILED` | `note` REQUIRED / TOO_LONG · `photoIds` MAX_ITEMS / INVALID | กรุณาเขียนความคืบหน้า · ไม่เกิน 500 ตัวอักษร · แนบได้สูงสุด 5 รูป |
+| 403 | `FORBIDDEN` | no `repair.ticket.update_progress`, or cannot see the ticket | คุณไม่มีสิทธิ์ทำรายการนี้ |
+| 404 | `TICKET_NOT_FOUND` | | ไม่พบงานนี้ |
+| 409 | `TICKET_CLOSED` | closed meanwhile | งานนี้ปิดไปแล้ว |
+| 409 | `INVALID_STATE` | not assessed yet (`awaiting_assessment`) or `resolved` | |
+| 422 | `PHOTO_NOT_FOUND` | | มีรูปที่อัปโหลดไม่สำเร็จ ลองใหม่หรือลบรูปนั้น |
 
 **Auto-close job (no endpoint):** at API start and every 15 min, `resolved` tickets with `autoCloseAt <= now` → `closed` / `auto_closed`, event `auto_closed` without actor (BR-F07-4). ~~Stage 6 adds the reminder notification 24 h before.~~ (CR-024)
 

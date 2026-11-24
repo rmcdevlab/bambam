@@ -39,9 +39,10 @@ export type ViewerRelation = "reporter" | "subscriber" | "technician" | "none";
 
 /**
  * `close` = admin (#21, Stage 3); `handover` = the lead who recorded a team-handled ticket, or admin
- * (#24, Stage 4, BR-F05-2). CR-015: no `change_priority`.
+ * (#24, Stage 4, BR-F05-2). CR-015: no `change_priority`. CR-059: `update_progress` = post a progress update
+ * (#37) while the job is in repair or reworking — technician / Admin (`repair.ticket.update_progress`).
  */
-export type TicketAction = "assess" | "resolve" | "confirm" | "send_back" | "handover" | "close";
+export type TicketAction = "assess" | "resolve" | "confirm" | "send_back" | "handover" | "close" | "update_progress";
 
 export type BlockedReason = "ASSESSMENT_REQUIRED";
 
@@ -58,7 +59,9 @@ export type TimelineEventType =
   | "handed_over"
   | "admin_closed"
   /** CR-015: no longer written; kept so old rows stay readable. */
-  | "priority_changed";
+  | "priority_changed"
+  /** CR-059: a progress update — `note` = the message, `photos` = its photos; everyone who sees the ticket reads it. */
+  | "progress_updated";
 
 // ---- shared objects ----
 
@@ -332,6 +335,11 @@ export type ResolveRequest = {
 export type ConfirmRequest = { rating: number; comment?: string };
 
 export type SendBackRequest = { reason: string; photoIds: string[] };
+
+// ---- #37 POST /repair/tickets/{id}/progress (CR-059) ----
+
+/** `note` 1–500 (required), `photoIds` 0–5 uploaded photos. */
+export type ProgressRequest = { note: string; photoIds: string[] };
 
 // ---- #21 POST /repair/tickets/{id}/close (admin, F08-B) ----
 

@@ -105,12 +105,13 @@ export const ticketColumns = {
  * One ticket on phones / tablets (owner draft): ticket no + priority pill · title · place · category ·
  * ระยะเวลาที่แจ้ง, then step badge + caption beside the action.
  */
-export function TicketCard({ ticket, caption, meta, action, highlight }: {
-  ticket: TicketRow; caption?: ReactNode; meta?: ReactNode; action: ReactNode; highlight?: boolean;
+export function TicketCard({ ticket, caption, meta, action, highlight, note }: {
+  /** `note`: text after the ticket no., same as the table's title note (e.g. S06 `· ทีมแก้เอง`, CR-021). */
+  ticket: TicketRow; caption?: ReactNode; meta?: ReactNode; action: ReactNode; highlight?: boolean; note?: ReactNode;
 }) {
   return <ListItemCard highlight={highlight}>
     <div className="flex items-center justify-between gap-2">
-      <span className="truncate text-xs font-medium tracking-wide text-muted-foreground">{ticket.ticketNo}</span>
+      <span className="truncate text-xs font-medium tracking-wide text-muted-foreground">{ticket.ticketNo}{note}</span>
       {ticket.priority && <PriorityBadge priority={ticket.priority} className="text-xs" />}
     </div>
     <div className="mt-1.5 flex gap-3">

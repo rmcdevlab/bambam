@@ -61,6 +61,7 @@ import type {
   Ref,
   ResolveRequest,
   SendBackRequest,
+  ProgressRequest,
   StaffRef,
   TicketCounts,
   TicketCountsQuery,
@@ -237,6 +238,11 @@ export function confirmTicket(id: string, req: ConfirmRequest): Promise<TicketDe
 /** S08: reporter sends the work back with a reason → reworking. */
 export function sendBackTicket(id: string, req: SendBackRequest): Promise<TicketDetail> {
   return http.post<TicketDetail>(`${ticketPath(id)}/send-back`, req);
+}
+
+/** #37 (CR-059): technician / Admin posts a progress update (message + 0–5 photos) while the job is in repair or reworking. */
+export function updateProgress(id: string, req: ProgressRequest): Promise<TicketDetail> {
+  return http.post<TicketDetail>(`${ticketPath(id)}/progress`, req);
 }
 
 // ---- #21 admin close (Stage 3, F08-B) ----

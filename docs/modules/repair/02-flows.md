@@ -1,6 +1,6 @@
 # ระบบแจ้งซ่อม — User flows
 
-Status: APPROVED (2026-10-14) · CR-005 applied 2026-10-15 · CR-008 applied 2026-10-16 · CR-014 applied 2026-10-19 · CR-020 applied 2026-10-24 · CR-024 applied 2026-10-26 (no executive role, no notifications) · CR-025 applied 2026-10-27 (place first, categories by building type)
+Status: APPROVED (2026-10-14) · CR-005 applied 2026-10-15 · CR-008 applied 2026-10-16 · CR-014 applied 2026-10-19 · CR-020 applied 2026-10-24 · CR-024 applied 2026-10-26 (no executive role, no notifications) · CR-025 applied 2026-10-27 (place first, categories by building type) · CR-059 applied 2026-11-23 (progress updates)
 
 <!-- Written by Claude in /discovery (2026-10-14). Primary source: attachments/BAMBAM-User-Flow02.html (F01–F20).
      IDs from the source are kept. New flows start at F21. "Added by Claude" lists every addition so it can be reviewed.
@@ -257,7 +257,7 @@ flowchart TD
 - BR-F06-1: พนักงาน/หัวหน้าทีม เห็นงานที่ตัวเองแจ้งหรือติดตาม (แก้ Finding 02 ในไฟล์แนบ); ช่างและ Admin ~~และผู้บริหาร~~ เห็นทุกงาน (CR-024; approval 2026-10-14, CR-005: ช่างคนเดียวเห็นทุกงาน) · (CR-034) หน้า "ติดตามงานซ่อม" (รายการงานของฉัน) ใช้ได้เฉพาะผู้มีสิทธิ์ `repair.ticket.report` — ไม่มีสิทธิ์แจ้งซ่อม = ไม่เห็นเมนู หน้าแสดงไม่มีสิทธิ์ API ตอบ 403 · หน้ารายละเอียดงานจากลิงก์ใช้กฎเดิม
 - BR-F06-2: งาน `resolved` ของผู้แจ้งอยู่บนสุด พร้อมป้าย "รอคุณประเมิน" (CR-005)
 - BR-F06-4: ผู้แจ้งเห็นวันที่คาดว่าจะเสร็จ และ "ดำเนินการโดยช่างภายนอก · {ประเภท}" แต่ไม่เห็นชื่อ เบอร์ หรือคะแนนของช่างภายนอก (CR-005)
-- BR-F06-3: Timeline แสดงทุกการเปลี่ยนสถานะ ใครทำ เมื่อไร (Added by Claude)
+- BR-F06-3: Timeline แสดงทุกการเปลี่ยนสถานะ ใครทำ เมื่อไร (Added by Claude) · (CR-059) รวม "อัปเดตความคืบหน้า" (ข้อความ + รูป) ทุกครั้ง ทุกคนที่เห็นงานเห็นด้วย และอัปเดตล่าสุดของรอบงานปัจจุบันแสดงที่แถบสถานะด้านบน
 
 **Edge cases**
 | Case | What happens |
@@ -399,6 +399,7 @@ flowchart TD
 - BR-F21-5: ผลซ่อมล่าสุดแสดงในการ์ดผลการซ่อม ผลครั้งก่อนอยู่ใน timeline (CR-005)
 - BR-F21-6: มีตัวกรองตามอาคาร (เลือกได้ "ทุกอาคาร") (CR-001)
 - BR-F21-7: Admin ปิดงานได้ทุกสถานะ (F08-B)
+- BR-F21-9 (CR-059): ระหว่างขั้น **กำลังซ่อม** (`in_repair`) และ **แก้ไขตามที่ส่งกลับ** (`reworking`) ช่างและ Admin (สิทธิ์ `repair.ticket.update_progress`) กด "อัปเดตความคืบหน้า" ได้ไม่จำกัดครั้ง: ข้อความ**บังคับ** 1–500 ตัวอักษร + รูปไม่บังคับ 0–5 รูป · ทุกคนที่เห็นงาน (ผู้แจ้ง ผู้ติดตาม ช่าง Admin) เห็นใน timeline และในรายงาน PDF · ส่งแล้วแก้ไขหรือลบไม่ได้ · ก่อนกดเริ่มดำเนินการ และหลังบันทึกผลซ่อมแล้ว อัปเดตไม่ได้ · ไม่มีการแจ้งเตือน (CR-024) แต่งานขึ้นเป็นงานที่อัปเดตล่าสุดใน "ติดตามงานซ่อม"
 
 **Edge cases**
 | Case | What happens |

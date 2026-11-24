@@ -30,6 +30,8 @@ Defined in code (BR-F29-1). Each module registers its own list; platform aggrega
 
 `repair.ticket.view_all` · `repair.ticket.work` · ~~`repair.ticket.set_priority`~~ (removed by repair CR-015: no ticket-level priority change) · `repair.ticket.close_any` · `repair.ticket.team_handle` · `repair.ticket.handover_any` · `repair.contractor.manage` · `repair.overview.view`
 
+**repair CR-059 (2026-11-23):** new key `repair.ticket.update_progress` (catalog group `งานแจ้งซ่อม`, after `repair.ticket.work`; label `อัปเดตความคืบหน้างาน`, description `ส่งข้อความและรูปความคืบหน้าระหว่างซ่อม ผู้แจ้งและผู้ติดตามเห็นในหน้างาน`). Seeded to every role holding `repair.ticket.work` and to `admin`; the matrix version is bumped. Non-settings key, so G3 does not apply.
+
 **CR-006 (2026-10-29):** new keys `repair.ticket.report` (repair create ticket, follow, QR prefill), `repair.building3d.view` (S29 3D / site-view data; also needs `repair.overview.view`), `car_booking.use`, `room_booking.use` (declared by platform as the system "การเข้าใช้บริการ" until those modules exist), `settings.users.view` (users list / detail read-only). Settings keys are **stored and tickable** — the "fixed" section below and `FIXED_PERMISSION` no longer apply to them. New error `403 PERMISSION_GUARD` (`details.rule`: `OWN_ROLE` · `SUPER_ADMIN` · `ESCALATION`) on matrix save (#7), role create / copy / delete, and user role change. Audit list: S26 sends `pageSize=20`. (CR-006)
 
 **Stage R1 shapes and rules (CR-006, written at `/build-stage settings R1 prepare` 2026-10-30).** Guards apply to every viewer whose role is not `super_admin`; Superadmin keeps the Stage 2–3 rules only. (CR-006)

@@ -6,6 +6,8 @@ import { CLOSED_LABELS, dateTime, dayLabel, PRIORITY_LABELS, RATING_LABELS } fro
 // S07 (CR-009 / D-060) reads the ticket as stages — แจ้งงาน · รับเรื่อง · กำลังดำเนินการ · (ส่งกลับให้แก้) · เสร็จ ·
 // ประเมินตรวจงาน — with the smaller events (follower added, date moved with its reason, send backs, an earlier
 // resolve) nested under the stage they belong to. `history` lists every event (dialog + print report).
+// CR-059: progress updates (technician / Admin, message + photos) nest under the work stage they were posted in —
+// กำลังดำเนินการ, or ส่งกลับให้แก้ during a rework — as `kind: "progress"` items; `latestUpdate` feeds the S07 band.
 
 /** Who is looking: drives the wording ("คุณ" vs "ผู้แจ้ง") and the next-action card. */
 export type StoryViewer = "reporter" | "follower" | "technician" | "staff";
@@ -17,7 +19,11 @@ export function storyViewer(ticket: Pick<TicketDetail, "viewerRelation">, me: Pi
   return "staff";
 }
 
-export type StoryItem = { id: string; at: string; title: string; detail: string; warn?: boolean; photos?: Photo[] };
+export type StoryItem = {
+  id: string; at: string; title: string; detail: string; warn?: boolean; photos?: Photo[];
+  /** CR-059: a progress update — `detail` is the message, `by` who posted it ("คุณ" for the viewer). */
+  kind?: "progress"; by?: string;
+};
 export type Stage = { key: string; state: "done" | "now" | "later"; title: string; time?: string; desc: string; sub: StoryItem[]; photos?: Photo[] };
 
 export type Story = {
@@ -30,6 +36,8 @@ export type Story = {
   sendBackReason: string | null;
   /** The last date change while the work is still going on. */
   dateChange: { from: string; to: string; reason?: string } | null;
+  /** CR-059: the newest progress update of the current work (after the last send back), while the job is open. */
+  latestUpdate: StoryItem | null;
 };
 
 const workByLabel = (w?: WorkBy | null) => (w === "contractor" ? "ช่างภายนอก" : w === "in_house" ? "ช่างของบริษัท" : "");
@@ -108,6 +116,9 @@ export function ticketStory(ticket: TicketDetail, viewer: StoryViewer, meId: str
         title = "ปรับความเร่งด่วน";
         detail = e.data.from && e.data.to ? `จาก ${PRIORITY_LABELS[e.data.from]} เป็น ${PRIORITY_LABELS[e.data.to]}` : "";
         break;
+      case "progress_updated":
+        items.set(e.id, { id: e.id, at: e.at, title: "อัปเดตความคืบหน้า", detail: e.note ?? "", photos: e.photos, kind: "progress", by: e.actor?.id === meId ? "คุณ" : actor || "ช่าง" });
+        continue;
     }
     items.set(e.id, { id: e.id, at: e.at, title, detail, warn, photos: e.photos });
   }
@@ -134,7 +145,7 @@ export function ticketStory(ticket: TicketDetail, viewer: StoryViewer, meId: str
     ? { key: "received", state: "now", title: "รับเรื่อง", time: dateTime(ticket.createdAt), desc: viewer === "technician" ? "รอคุณกำหนดวันเสร็จและกดเริ่มดำเนินการ" : "รอช่างกำหนดวันที่คาดว่าจะเสร็จ", sub: of("team_handled", "handed_over").map(item) }
     : { key: "received", state: "done", title: "รับเรื่อง", time: dateTime(ticket.createdAt), desc: "งานถึงช่างแล้ว", sub: [] });
 
-  const workSub = of("assessment_changed", "priority_changed", "handed_over").filter((e) => !reaccepts.has(e.id) && (!sentBacks.length || e.at < sentBacks[0].at)).map(item);
+  const workSub = of("assessment_changed", "priority_changed", "handed_over", "progress_updated").filter((e) => !reaccepts.has(e.id) && (!sentBacks.length || e.at < sentBacks[0].at)).map(item);
   if (ticket.step === "awaiting_assessment") {
     stages.push({ key: "work", state: "later", title: "กำลังดำเนินการ", desc: "ช่างกำหนดวันเสร็จและผู้ดำเนินการซ่อม แล้วเริ่มซ่อม", sub: [] });
   } else if (ticket.step === "in_repair") {
@@ -151,7 +162,7 @@ export function ticketStory(ticket: TicketDetail, viewer: StoryViewer, meId: str
 
   // ส่งกลับให้แก้ appears only after a send back (CR-009).
   if (sentBacks.length) {
-    const sub = events.filter((e) => e.at >= sentBacks[0].at && (e.type === "sent_back" || reaccepts.has(e.id) || (e.type === "resolved" && e !== finalResolve) || e.type === "assessment_changed")).map(item);
+    const sub = events.filter((e) => e.at >= sentBacks[0].at && (e.type === "sent_back" || reaccepts.has(e.id) || (e.type === "resolved" && e !== finalResolve) || e.type === "assessment_changed" || e.type === "progress_updated")).map(item);
     stages.push(ticket.step === "reworking"
       ? { key: "rework", state: "now", title: "ส่งกลับให้แก้", time: dateTime(sentBacks.at(-1)!.at), desc: awaitingReaccept ? "รอช่างกำหนดวันเสร็จใหม่" : `ช่างกำลังแก้ไข คาดว่าจะเสร็จ ${expected}`, sub }
       : { key: "rework", state: "done", title: "ส่งกลับให้แก้", time: dateTime(sentBacks.at(-1)!.at), desc: `${you}ส่งกลับ ${sentBacks.length} ครั้ง · ช่างแก้ไขแล้ว`, sub });
@@ -178,9 +189,14 @@ export function ticketStory(ticket: TicketDetail, viewer: StoryViewer, meId: str
     stages.push({ key: "review", state: "later", title: "ประเมินตรวจงาน", desc: `${you}ดูผลแล้วให้ 1–5 ดาว งานจึงปิด`, sub: [] });
   }
 
+  // CR-059: only updates of the current round of work count as "latest" (a rework starts a new round).
+  const roundStart = sentBacks.at(-1)?.at ?? "";
+  const latest = ticket.status === "in_progress" ? of("progress_updated").filter((e) => e.at >= roundStart).at(-1) : undefined;
+
   return {
     stages,
     history: events.map(item),
+    latestUpdate: latest ? item(latest) : null,
     awaitingReaccept,
     sendBackReason,
     dateChange: ticket.step === "in_repair" || ticket.step === "reworking" ? dateChange : null,

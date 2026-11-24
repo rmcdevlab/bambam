@@ -8,6 +8,8 @@ export const PERM = {
   ticketReport: "repair.ticket.report",
   ticketViewAll: "repair.ticket.view_all",
   ticketWork: "repair.ticket.work",
+  /** CR-059: post progress updates (message + photos) while a job is in progress. */
+  ticketUpdateProgress: "repair.ticket.update_progress",
   ticketCloseAny: "repair.ticket.close_any",
   ticketTeamHandle: "repair.ticket.team_handle",
   ticketHandoverAny: "repair.ticket.handover_any",

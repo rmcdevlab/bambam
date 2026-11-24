@@ -812,6 +812,13 @@
       "id"
     ]
   },
+  "repair.TouchTicket": {
+    "sql": "\nUPDATE repair.tickets SET updated_at = $1 WHERE id = $2;",
+    "params": [
+      "now",
+      "id"
+    ]
+  },
   "repair.HandOverTicket": {
     "sql": "\nUPDATE repair.tickets\nSET status = 'in_progress', closed_reason = NULL, closed_at = NULL, updated_at = $1\nWHERE id = $2;",
     "params": [

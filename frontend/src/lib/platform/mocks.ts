@@ -82,7 +82,7 @@ export const mockMeByRole: Record<Role, Me> = {
     email: null,
     role: "technician",
     roleName: "ช่างเทคนิค",
-    permissions: [PERM.ticketViewAll, PERM.ticketWork, PERM.contractorManage],
+    permissions: [PERM.ticketViewAll, PERM.ticketWork, PERM.ticketUpdateProgress, PERM.contractorManage],
     technicianCategories: [
       { id: "6f1c2a90-0000-4000-8000-000000000001", name: "ระบบปรับอากาศ" },
       { id: "6f1c2a90-0000-4000-8000-000000000002", name: "ไฟฟ้าและแสงสว่าง" },
@@ -99,7 +99,7 @@ export const mockMeByRole: Record<Role, Me> = {
     email: null,
     role: "admin",
     roleName: "Admin",
-    permissions: [PERM.ticketReport, PERM.ticketViewAll, PERM.ticketCloseAny, PERM.ticketHandoverAny, PERM.overviewView, PERM.building3dView, ...SERVICES, ...ADMIN_SETTINGS],
+    permissions: [PERM.ticketReport, PERM.ticketViewAll, PERM.ticketUpdateProgress, PERM.ticketCloseAny, PERM.ticketHandoverAny, PERM.overviewView, PERM.building3dView, ...SERVICES, ...ADMIN_SETTINGS],
   },
   [MOCK_CUSTOM_ROLE]: {
     ...base,
@@ -112,7 +112,7 @@ export const mockMeByRole: Record<Role, Me> = {
     email: null,
     role: MOCK_CUSTOM_ROLE,
     roleName: "หัวหน้าช่าง",
-    permissions: [PERM.ticketReport, PERM.ticketViewAll, PERM.ticketWork, PERM.ticketCloseAny, ...SERVICES],
+    permissions: [PERM.ticketReport, PERM.ticketViewAll, PERM.ticketWork, PERM.ticketUpdateProgress, PERM.ticketCloseAny, ...SERVICES],
   },
 };
 

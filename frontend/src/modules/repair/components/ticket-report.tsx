@@ -81,7 +81,9 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return <section className="tr-sec"><h2>{title}</h2>{children}</section>;
 }
 
-const subRows = (s: Stage): Row[] => s.sub.map((e) => [`${e.title}\n${dateTime(e.at, true)}`, e.detail]);
+const subRows = (s: Stage): Row[] => s.sub.map((e) => [`${e.title}\n${dateTime(e.at, true)}`, e.kind === "progress" ? `${e.detail}\nโดย ${e.by}` : e.detail]);
+/** CR-059: the photos of the stage's progress updates, printed under its table. */
+const progressPhotos = (s: Stage) => s.sub.filter((e) => e.kind === "progress").flatMap((e) => e.photos ?? []);
 
 export function TicketReport({ ticket, viewer, story }: { ticket: TicketDetail; viewer: StoryViewer; story: Story }) {
   const staff = viewer === "technician" || viewer === "staff";
@@ -113,6 +115,7 @@ export function TicketReport({ ticket, viewer, story }: { ticket: TicketDetail; 
           ...(ticket.expectedDoneOn && ticket.status === "in_progress" ? [["คาดว่าจะเสร็จ", dayLabel(ticket.expectedDoneOn, true)] as Row] : []),
           ["รายละเอียด", s.desc], ...subRows(s)]} />
         <Photos title="รูปประกอบ" photos={s.photos ?? []} />
+        <Photos title="ภาพความคืบหน้า" photos={progressPhotos(s)} />
       </Section>;
       case "done": {
         const r = ticket.result;
@@ -133,6 +136,7 @@ export function TicketReport({ ticket, viewer, story }: { ticket: TicketDetail; 
       }
       default: return <Section key={s.key} title={s.title}>
         <Table rows={[["วันที่และเวลา", s.time ?? "", "สถานะขั้นตอน", state], ["รายละเอียด", s.desc], ...subRows(s)]} />
+        <Photos title="ภาพความคืบหน้า" photos={progressPhotos(s)} />
       </Section>;
     }
   });

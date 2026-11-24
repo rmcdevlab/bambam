@@ -44,6 +44,8 @@ test.describe("technician", () => {
     await nextAction(page).getByRole("button", { name: "เริ่มดำเนินการ" }).click();
     const dialog = page.getByRole("dialog", { name: "เริ่มดำเนินการ" });
     await expect(dialog.getByRole("radio", { name: "ช่างของบริษัท" })).toBeChecked();
+    // CR-034: ช่างผู้รับผิดชอบ defaults to me once #36 loads — wait, or a fast submit also shows its error
+    await expect(dialog.getByRole("combobox", { name: /ช่างผู้รับผิดชอบ/ })).toBeEnabled();
     await dialog.getByRole("button", { name: "เริ่มดำเนินการ" }).click();
     await expect(dialog.getByRole("alert")).toHaveText("เลือกวันที่คาดว่าจะเสร็จ");
     await dialog.getByRole("radio", { name: /^พรุ่งนี้/ }).click();
@@ -164,6 +166,7 @@ test.describe("technician", () => {
     await expect(dialog.getByRole("radio", { name: "ช่างภายนอก" })).toBeChecked();
     await dialog.getByRole("radio", { name: /^พรุ่งนี้/ }).click();
     await dialog.getByRole("radio", { name: "ช่างของบริษัท" }).click();
+    await expect(dialog.getByRole("combobox", { name: /ช่างผู้รับผิดชอบ/ })).toBeEnabled(); // defaults to me once #36 loads (CR-034)
     await dialog.getByLabel(/เหตุผลที่เลื่อน/).fill("ช่างนอกไม่มา ช่างบริษัททำเอง");
     await dialog.getByRole("button", { name: "บันทึกวันใหม่" }).click();
     await confirmPopup(page, "บันทึกวันใหม่"); // CR-044

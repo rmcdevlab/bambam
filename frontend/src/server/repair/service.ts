@@ -93,6 +93,7 @@ export async function action(id:string,action:string,u:User,b:Row) {
  if((action==="assess"||action==="resolve")&&!can(u,"repair.ticket.work"))fail("NOT_TECHNICIAN","forbidden");
  if(action==="follow")report(u);
  if(action==="close")permit(u.permissions,"repair.ticket.close_any");
+ if(action==="progress")permit(u.permissions,"repair.ticket.update_progress");
  if(action==="handover")permit(u.permissions,"repair.ticket.handover_any","repair.ticket.team_handle");
  await transaction(async db=>{
   const t=await one("repair.LockTicket",{id},db,"TICKET_NOT_FOUND"),now=new Date();
@@ -125,6 +126,11 @@ export async function action(id:string,action:string,u:User,b:Row) {
     if(b.rating==null)invalid({rating:"REQUIRED"});if(!Number.isInteger(b.rating)||b.rating<1||b.rating>5)invalid({rating:"INVALID"});const comment=text(b.comment,"comment",500);
     await query("repair.ConfirmTicket",{id,rating:b.rating,rating_comment:nullable(comment),now},db);await event(db,id,u,"confirmed",nullable(comment),{rating:b.rating});
    }else{const reason=text(b.reason,"reason",500,true);await query("repair.SendBackTicket",{id,now},db);await event(db,id,u,"sent_back",reason,{},ids(b.photoIds,"photoIds",0,5),"send_back");}
+  }else if(action==="progress"){
+   // CR-059: a progress update (message 1–500 + 0–5 photos) while the job is in repair or reworking — after เริ่มดำเนินการ, before the result.
+   await visible(id,u,db);state("in_progress");if(!t.expected_done_on)fail("INVALID_STATE","conflict");
+   const note=text(b.note,"note",500,true),photos=ids(b.photoIds,"photoIds",0,5);
+   await query("repair.TouchTicket",{id,now},db);await event(db,id,u,"progress_updated",note,{},photos,"progress");
   }else if(action==="close"){
    permit(u.permissions,"repair.ticket.close_any");const reason=text(b.reason,"reason",500,true);await query("repair.AdminCloseTicket",{id,now},db);await event(db,id,u,"admin_closed",reason);
   }else if(action==="follow"){

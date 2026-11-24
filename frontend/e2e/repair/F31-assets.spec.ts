@@ -37,6 +37,8 @@ async function openFloor(page: Page, level: number, building = "อาคาร 
   const edit = page.getByRole("button", { name: "จัดวางอุปกรณ์", exact: true });
   if (await edit.count()) await edit.click(); // The Riverside side selector exits edit mode.
   await expect(page.getByRole("button", { name: "เพิ่มอุปกรณ์" })).toBeVisible({ timeout: 15_000 }); // #30 + model build under load
+  // The Home band above S29 grew (BAM mascot band): keep the plan and its palette on screen, or drags drop off-screen.
+  await card.evaluate((el) => el.scrollIntoView({ block: "center" }));
 }
 
 /** Screen centre of a room label on the plan (labels are aria-hidden, so read the DOM). */
@@ -47,6 +49,19 @@ async function roomPoint(page: Page, name: string, card = CARD) {
     const r = el.getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + r.height + 14 };
   }, [card, name] as const);
+}
+
+/** A chip's box once the plan has settled (the plan reloads after a save and the chip can still move). */
+async function settledBox(page: Page, locator: ReturnType<Page["locator"]>) {
+  let prev = "";
+  for (let i = 0; i < 20; i++) {
+    const box = await locator.boundingBox();
+    const now = JSON.stringify(box);
+    if (box && now === prev) return box;
+    prev = now;
+    await page.waitForTimeout(150);
+  }
+  return (await locator.boundingBox())!;
 }
 
 async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
@@ -140,11 +155,11 @@ test("AC3 + AC4: drag a type into a room, drop outside refused, drag to move wit
   expect(placed?.room.name).toBe("WPS ห้องพี่มีด");
   expect(placed?.x).not.toBeNull();
 
-  // move to another room, then undo
-  const chip = (await page.locator(CARD).getByRole("button", { name: new RegExp(code) }).boundingBox())!;
-  await drag(page, { x: chip.x + chip.width / 2, y: chip.y + chip.height / 2 }, await roomPoint(page, "RMC METRO - ท่าหลวง 1"));
-  await expect(page.getByText(`ย้าย ${code} ไปRMC METRO - ท่าหลวง 1แล้ว`)).toBeVisible();
-  await expect.poll(async () => (await assetOnFloor(page, 3, code))?.room.name).toBe("RMC METRO - ท่าหลวง 1");
+  // move to another room, then undo (ท่าหลวง 3: the big central room, clear of the ticket pins in ท่าหลวง 1)
+  const chip = await settledBox(page, page.locator(CARD).getByRole("button", { name: new RegExp(code) }));
+  await drag(page, { x: chip.x + chip.width / 2, y: chip.y + chip.height / 2 }, await roomPoint(page, "RMC METRO - ท่าหลวง 3"));
+  await expect(page.getByText(`ย้าย ${code} ไปRMC METRO - ท่าหลวง 3แล้ว`)).toBeVisible();
+  await expect.poll(async () => (await assetOnFloor(page, 3, code))?.room.name).toBe("RMC METRO - ท่าหลวง 3");
   await page.locator("[data-sonner-toast] button", { hasText: "เลิกทำ" }).first().dispatchEvent("click"); // the toast may sit under others
   await expect.poll(async () => (await assetOnFloor(page, 3, code))?.room.name).toBe("WPS ห้องพี่มีด");
   // Deactivate it so runs do not stack chips in this room (the F31 tour drags its own chip from here).

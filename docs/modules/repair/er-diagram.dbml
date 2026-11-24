@@ -55,6 +55,7 @@ Enum repair.photo_kind {
   send_back
   follow
   team
+  progress [note: 'CR-059 progress update photos']
 }
 
 Enum repair.event_type {
@@ -70,6 +71,7 @@ Enum repair.event_type {
   handed_over
   admin_closed
   priority_changed
+  progress_updated [note: 'CR-059: message + photos while in repair / reworking']
 }
 
 Enum repair.year_format {

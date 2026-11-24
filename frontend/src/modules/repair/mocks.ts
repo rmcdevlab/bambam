@@ -612,6 +612,11 @@ const seeds: Seed[] = [
     room: "พื้นที่ส่วนกลางชั้น 3", location: "ทางเดินหน้าลิฟต์", reporter: P.wanna, technician: P.thanakorn,
     createdAgo: DAY + 3 * HOUR, assessedAgo: DAY, dateChange: { ago: 2 * HOUR, days: 1, reason: "รออะไหล่บัลลาสต์" },
     photos: [mockPhoto(HUE.electric, "ไฟทางเดิน")],
+    // CR-059: progress updates while in repair
+    extraEvents: [
+      ev("progress_updated", P.thanakorn, ago(DAY - 2 * HOUR), { note: "ตรวจแล้ว บัลลาสต์เสีย 2 ตัว ถอดออกแล้ว ปิดไฟจุดนั้นไว้ก่อนเพื่อความปลอดภัย", photos: [mockPhoto(HUE.electric, "บัลลาสต์ที่ถอดออก")] }),
+      ev("progress_updated", P.thanakorn, ago(90 * 60 * 1000), { note: "สั่งบัลลาสต์ใหม่แล้ว ร้านแจ้งว่าของถึงพรุ่งนี้เช้า จะเข้าเปลี่ยนให้ทันทีที่ของมา" }),
+    ],
   },
   {
     n: 148, status: "resolved", priority: "high", category: 3, symptoms: [2], building: 1, floor: 2,
@@ -771,6 +776,7 @@ function withActions(t: TicketDetail, v: Viewer): TicketDetail {
     if (t.expectedDoneOn && t.workBy) allowedActions.push("resolve");
     else blockedActions.resolve = "ASSESSMENT_REQUIRED";
   }
+  if (t.status === "in_progress" && t.expectedDoneOn && can(v, PERM.ticketUpdateProgress)) allowedActions.push("update_progress"); // CR-059
   if (t.status === "resolved" && t.reporter.id === v.id) allowedActions.push("confirm", "send_back");
   if (can(v, PERM.ticketCloseAny) && t.status !== "closed") allowedActions.push("close");
   if (canHandOver(t, v)) allowedActions.push("handover");

@@ -286,6 +286,10 @@ UPDATE repair.tickets
 SET status = 'in_progress', send_back_count = send_back_count + 1, auto_close_at = NULL, updated_at = @now
 WHERE id = @id;
 
+-- name: TouchTicket :exec
+-- CR-059: a progress update changes no status but is activity, so S06 (updatedAt:desc) brings the job up.
+UPDATE repair.tickets SET updated_at = @now WHERE id = @id;
+
 -- name: HandOverTicket :exec
 -- F05 (BR-F05-1/3): the same team-handled ticket goes back to the technician, waiting for the assessment.
 UPDATE repair.tickets

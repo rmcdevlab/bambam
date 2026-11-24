@@ -157,6 +157,12 @@ export const followFieldMessages: FieldMessages = {
 };
 
 /** Hand-over dialog (#24, `_common.md` §7). */
+/** #37 อัปเดตความคืบหน้า (CR-059). */
+export const progressFieldMessages: FieldMessages = {
+  note: { REQUIRED: "กรุณาเขียนความคืบหน้า", TOO_LONG: "ไม่เกิน 500 ตัวอักษร" },
+  photoIds: { MAX_ITEMS: "แนบได้สูงสุด 5 รูป", INVALID: "มีรูปที่อัปโหลดไม่สำเร็จ ลองใหม่หรือลบรูปนั้น" },
+};
+
 export const handoverFieldMessages: FieldMessages = {
   reason: { REQUIRED: "กรุณาใส่เหตุผล", TOO_LONG: "ไม่เกิน 500 ตัวอักษร" },
 };

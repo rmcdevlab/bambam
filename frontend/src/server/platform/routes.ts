@@ -3,7 +3,7 @@ import "server-only";
 const repair = [
  "GET categories", "GET buildings", "GET me/recent-places", "POST photos", "GET photos/:id",
  "POST tickets", "GET tickets", "GET tickets/counts", "GET tickets/mine", "GET tickets/duplicates", "GET tickets/:id",
- ...["assess","resolve","confirm","send-back","close","follow","handover"].map(action=>`POST tickets/:id/${action}`),
+ ...["assess","resolve","confirm","send-back","close","follow","handover","progress"].map(action=>`POST tickets/:id/${action}`),
  "GET technicians", "GET contractor-types", "POST contractor-types", "GET contractors", "POST contractors", "GET contractors/:id", "PUT contractors/:id", "GET contractors/:id/jobs",
  "GET admin/overview", "GET asset-types", "GET floors/:id/plan", "GET floors/:id/room-plan", "GET assets/suggest-code", "POST assets", "PUT assets/:id", "POST assets/:id/deactivate", "GET assets/:code",
 ];
