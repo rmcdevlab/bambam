@@ -9,13 +9,13 @@ import { Mascot } from "@/components/shared/mascot";
 
 // CR-047 — S06 hero, ported from the owner draft output/repair-hero/index.html (v2, character animation). Markup and the
 // `.repair-hero` / `.rh-*` styles (globals.css) follow the draft; the sprite sheet lives in the app
-// (/brand/bam-mascot-actions-white.webp, 4 × 3 poses), so nothing depends on output/. Leads keep `บันทึกงานที่ทีมแก้แล้ว`.
+// (/brand/bam-leopard-actions.webp, 4 × 3 poses), so nothing depends on output/. Leads keep `บันทึกงานที่ทีมแก้แล้ว`.
 // The sequence plays once on mount: 12 walk frames while BAM walks in → turn → wave with the speech bubble → present
 // (the report button glows) → attentive pose. Amendment 2: no held beat before the end (the draft held the present
 // pose 1.6s) — the glow overlaps the final pose. Timers pause when the hero is offscreen or the tab hidden. Reduced
 // motion or a sprite that fails to decode: the static pose + bubble.
 
-const SPRITE = appPath("/brand/bam-mascot-actions-white.webp");
+const SPRITE = appPath("/brand/bam-leopard-actions.webp");
 type Beat = { frame: number; ms: number; phase: "walk" | "turn" | "greet" | "present" | "idle" };
 const SEQUENCE: Beat[] = [
   ...Array.from({ length: 12 }, (_, i): Beat => ({ frame: i % 6, ms: 140, phase: "walk" })),

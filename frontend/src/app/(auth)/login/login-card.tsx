@@ -16,7 +16,7 @@ import "./login.css";
 const plex = IBM_Plex_Sans_Thai({ subsets: ["thai", "latin"], weight: ["600", "700"], display: "swap" });
 
 // S01 เข้าสู่ระบบ + ออกจากระบบแล้ว (CR-037): a port of output/qr-login-redesign/login.html — logo + help, the
-// headline, one RMC SSO button with the account hint, the login mascot on a blue arch, footer. Anuphan like the
+// headline, one plain-language login button (CR-060; it still starts RMC SSO) with the account hint, the login mascot on a blue arch, footer. Anuphan like the
 // rest of the app (headline: see `plex`). Never starts login by itself (sso.md Flow 1). /signed-out renders the same screen with an
 // "ออกจากระบบแล้ว" notice.
 
@@ -69,15 +69,15 @@ export function LoginScreen({ signedOut = false }: { signedOut?: boolean }) {
           )}
 
           <button type="button" className="bl-cta" onClick={start} disabled={busy || maintenance} aria-describedby="bl-busy">
-            <span>เข้าสู่ระบบด้วย RMC SSO</span>
+            <span>เข้าสู่ระบบ</span>
             <svg viewBox="0 0 24 24" aria-hidden><path d="M4 12h16m-6-6 6 6-6 6" /></svg>
           </button>
           <p className="bl-accountNote">ใช้บัญชีบริษัทของคุณเพื่อเข้าใช้งาน</p>
-          <p id="bl-busy" className="sr-only" role="status">{busy ? "กำลังไปหน้าเข้าสู่ระบบ RMC SSO" : ""}</p>
+          <p id="bl-busy" className="sr-only" role="status">{busy ? "กำลังไปหน้าเข้าสู่ระบบ" : ""}</p>
         </section>
 
         <div className="bl-visual" aria-hidden>
-          <Image src={appPath("/brand/bam-mascot-login-white.webp")} alt="" width={631} height={640} priority />
+          <Image src={appPath("/brand/bam-leopard-login.webp")} alt="" width={631} height={640} priority />
         </div>
       </main>
 

@@ -13,7 +13,8 @@ import type { LabelAsset } from "../../types";
 // short location on one line each. `.qr-mono` = the black-on-white option. The same markup is the on-screen preview
 // (scaled) and the print sheet (`@media print` in LABEL_PRINT_CSS).
 
-const BOARD = `url("${appPath("/brand/bam-qr-mascot-board.webp")}")`;
+// D-181: the snow leopard board is not mirrored (the old tiger head was flipped; the leopard headset reads "AI").
+const BOARD = `url("${appPath("/brand/bam-leopard-qr-board.webp")}")`;
 
 /** Print rules: only `.qr-print-root` prints; the app (and the preview dialog) is hidden on paper. */
 export const LABEL_PRINT_CSS = `
@@ -47,7 +48,7 @@ export const LABEL_PRINT_CSS = `
 .qr-head strong { font-size: 9pt; line-height: 1.2; font-weight: 700; white-space: nowrap; }
 .qr-brand { display: inline-flex; background: #fff; border-radius: 1mm; padding: 1mm 1.5mm; }
 .qr-brand img { display: block; width: 12mm; height: auto; }
-.qr-mascot { position: absolute; top: 0; left: 25mm; width: 40mm; height: 16mm; background: ${BOARD} top center / 40mm auto no-repeat; transform: scaleX(-1); }
+.qr-mascot { position: absolute; top: 0; left: 25mm; width: 40mm; height: 16mm; background: ${BOARD} top center / 40mm auto no-repeat; }
 .qr-card { position: absolute; top: 14.5mm; left: 14mm; box-sizing: border-box; width: 42mm; height: 42mm; padding: 1mm; background: #fff; border-radius: 3mm; outline: 0.3mm solid #10131c; }
 .qr-card svg { display: block; width: 40mm; height: 40mm; }
 .qr-paw { position: absolute; top: 15.5mm; width: 5.32mm; height: 7.6mm; background-image: ${BOARD}; background-size: 38mm auto; background-repeat: no-repeat; }

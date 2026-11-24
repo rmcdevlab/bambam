@@ -3,16 +3,17 @@ import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-// White BAM tiger (CR-029): PNG masters and matching WebP exports in public/brand.
-// White-specific filenames also refresh previously optimised orange-tiger images.
+// BAM snow leopard in the navy / royal-blue techwear suit (D-181). Trimmed WebP exports in public/brand;
+// the generated PNG masters live in docs/shared/style/references/mascot-leopard/. The previous white tiger is archived
+// in docs/shared/style/references/mascot-tiger-archive/.
 const SOURCES = {
-  welcome: { src: appPath("/brand/bam-mascot-welcome-white.webp"), width: 493, height: 560 },
-  guide: { src: appPath("/brand/bam-mascot-guide-white.webp"), width: 514, height: 560 },
-  review: { src: appPath("/brand/bam-mascot-review-white.webp"), width: 469, height: 560 },
-  tracking: { src: appPath("/brand/bam-mascot-tracking-white.webp"), width: 397, height: 560 },
-  loading: { src: appPath("/brand/bam-mascot-loading-white.webp"), width: 428, height: 560 },
+  welcome: { src: appPath("/brand/bam-leopard-welcome.webp"), width: 398, height: 560 },
+  guide: { src: appPath("/brand/bam-leopard-guide.webp"), width: 378, height: 560 },
+  review: { src: appPath("/brand/bam-leopard-review.webp"), width: 373, height: 560 },
+  tracking: { src: appPath("/brand/bam-leopard-tracking.webp"), width: 352, height: 560 },
+  loading: { src: appPath("/brand/bam-leopard-loading.webp"), width: 363, height: 560 },
   // S01 login (CR-019 follow-up, bam-workplace-login-v7.html): presenting, with the staff badge.
-  login: { src: appPath("/brand/bam-mascot-login-white.webp"), width: 631, height: 640 },
+  login: { src: appPath("/brand/bam-leopard-login.webp"), width: 631, height: 640 },
 } as const;
 
 export type MascotPose = keyof typeof SOURCES;
@@ -64,7 +65,7 @@ type MascotPanelProps = Omit<ComponentProps<"section">, "children" | "ref"> & {
 };
 
 /**
- * CR-035 — the S06 tracking treatment used wherever the mascot appears: the white tiger on a solid primary panel,
+ * CR-035 — the S06 tracking treatment used wherever the mascot appears: the mascot on a solid primary panel,
  * beside white heading copy. Buttons inside flip to the panel (globals.css `.mascot-panel`).
  */
 export function MascotPanel({ as: Tag = "section", pose = "welcome", size = [80, 120], art, priority, aside, className, children, ...props }: MascotPanelProps) {

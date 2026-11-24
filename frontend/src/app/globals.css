@@ -182,7 +182,7 @@
   color: var(--c);
 }
 
-/* CR-035: the white tiger always sits on a solid primary panel (S06 tracking treatment, replaces the CR-029
+/* CR-035: the mascot (snow leopard since D-181) always sits on a solid primary panel (S06 tracking treatment, replaces the CR-029
    blob backdrops). Inside the panel focus rings turn white and shared buttons flip to the blue surface. */
 .mascot-image { filter: drop-shadow(0 3px 4px rgb(10 18 60 / 28%)); }
 .mascot-panel :is(a, button):focus-visible { outline: 3px solid var(--primary-foreground); outline-offset: 2px; }
@@ -198,7 +198,7 @@
 .mascot-panel [data-slot="button"][data-variant="link"] { color: var(--primary-foreground); text-decoration: underline; text-underline-offset: 4px; }
 
 /* CR-047 — S06 hero, ported from output/repair-hero/index.html (v2: character sprite). Nothing is loaded from output/:
-   the sprite is /brand/bam-mascot-actions-white.webp (4 × 3 poses). Layout follows the banner width (container
+   the sprite is /brand/bam-leopard-actions.webp (4 × 3 poses). Layout follows the banner width (container
    queries): full >= 1110px, compact 3 columns 728–1109px, stacked below 728px. The sequence (repair-hero.tsx) plays
    once: walk in → turn → wave + speech bubble → present (button highlight) → attentive pose, with no held beat
    before the end. Off under prefers-reduced-motion (static attentive pose + bubble). */
@@ -223,7 +223,7 @@
 .rh-body { position: relative; width: 224px; height: 224px; display: grid; justify-items: center; }
 .rh-still { height: 100%; filter: drop-shadow(0 8px 6px rgb(16 37 164 / 17%)); }
 .rh-still .mascot-frame { display: block; height: 100% !important; width: auto !important; aspect-ratio: 397 / 560; }
-.rh-sprite { display: none; width: 100%; height: 100%; background-image: url("../../public/brand/bam-mascot-actions-white.webp"); background-size: 400% 300%; background-position: 100% 100%; background-repeat: no-repeat; filter: drop-shadow(0 8px 6px rgb(16 37 164 / 17%)); }
+.rh-sprite { display: none; width: 100%; height: 100%; background-image: url("../../public/brand/bam-leopard-actions.webp"); background-size: 400% 300%; background-position: 100% 100%; background-repeat: no-repeat; filter: drop-shadow(0 8px 6px rgb(16 37 164 / 17%)); }
 .repair-hero.rh-art-ready .rh-still { display: none; }
 .repair-hero.rh-art-ready .rh-sprite { display: block; }
 .rh-speech {
@@ -358,9 +358,8 @@
   }
 }
 
-/* CR-055 — S29 hero, ported from output/admin-home-v3/index.html with the owner changes of 2026-11-18: BAM does not
-   walk, no replay / motion buttons, the greeting bubble sits beside BAM, slower sequence (admin-hero.tsx). Sprites:
-   /brand/bam-mascot-actions-white.webp (wave) and /brand/bam-mascot-blueprint-white.webp (read, present, neutral).
+/* CR-055 / CR-060 amendment — full-character BAM frames: wave, briefly read, present the problem plan.
+   No walking or replay controls. One cleared canvas replaces each pose without dissolves or trailing silhouettes.
    Sizes follow the hero width (container queries): small at 440px and below. */
 .admin-hero {
   container-type: inline-size;
@@ -387,12 +386,7 @@ button.ah-pill:focus-visible { outline: 3px solid #f3bc69; outline-offset: 3px; 
 .ah-actor { position: absolute; left: 0; top: 14px; width: 220px; height: 220px; z-index: 4; pointer-events: none; }
 .ah-shadow { position: absolute; bottom: 0; left: 25%; width: 50%; height: 10px; border-radius: 50%; background: rgb(14 28 150 / 55%); filter: blur(2px); }
 .ah-still { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; }
-.ah-art { position: absolute; inset: 0; transform-origin: 50% 90%; }
-.ah-art.ah-reading { animation: ah-read 1.5s ease-in-out 1; }
-.ah-body { position: absolute; inset: 0; transform-origin: 50% 92%; }
-.ah-pose { position: absolute; inset: 0; background-repeat: no-repeat; opacity: 0; will-change: opacity; }
-/* invisible: the blueprint in BAM's hands at the start of the handover (sprite slot 60); the card grows from here */
-.ah-plan-from { position: absolute; left: 29.3%; top: 49.7%; width: 46.7%; height: 24.9%; pointer-events: none; }
+.ah-frames { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .ah-visual svg { display: block; width: 100%; height: 100%; }
 
 /* speech: beside BAM's head while greeting (owner: closer, so it reads as BAM talking); a short note under the card after */
@@ -459,5 +453,4 @@ button.ah-pill:focus-visible { outline: 3px solid #f3bc69; outline-offset: 3px; 
   .ah-board-head { padding: 9px 9px 6px; font-size: 10px; } .ah-board-copy { padding: 7px 9px 9px; }
   .ah-board-copy h3 { font-size: 12.5px; } .ah-board-copy p { font-size: 10px; } .ah-go { font-size: 12px; padding: 7px 10px; }
 }
-@keyframes ah-read { 0%, 100% { transform: rotate(0) translateY(0); } 35% { transform: rotate(-2deg) translateY(3px); } 65% { transform: rotate(1deg) translateY(1px); } }
 @media (prefers-reduced-motion: reduce) { .admin-hero *, .admin-hero *::before, .admin-hero *::after { animation: none !important; transition: none !important; } }
