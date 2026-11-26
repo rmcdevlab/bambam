@@ -30,7 +30,7 @@ This task issued private files for the oldest existing non-demo Admin without
 creating users or changing roles. The owner accepted the stage and requested activation on 2026-11-26. Local
 `.env.local` is configured for API mode; `.env.before-aok.local` preserves its prior
 settings. Production configuration has the matching digest/principal and
-`is_aok=false`; release/live verification are recorded in module progress.
+`is_aok=false`; release/live verification passed (Actions run 45769384084).
 
 ## Configuration
 

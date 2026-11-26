@@ -4,7 +4,7 @@
 
 ## Now
 
-- CR-061 (accepted 2026-11-26; release activation in progress): read-only local API mode `is_aok=true`, private key/hash files issued, existing Admin principal, no local DB/SSO/jobs. Owner explicitly requested local env setup and production activation via SSH; local env configured, production hash/principal installed, release verification in progress. Activation: `deploy/AOK.md`.
+- CR-061 (accepted and deployed 2026-11-26, `repair-cr-061`): read-only local API mode `is_aok=true`, private key/hash files issued, existing Admin principal, no local DB/SSO/jobs. Local `.env.local` uses API mode with DATABASE_URL cleared; private backup retained. Production hash/principal active with is_aok=false; authenticated local/production reads and write guards pass. Activation: `deploy/AOK.md`.
 - CR-060 amendment 2 (owner 2026-11-24; built, waiting for owner review): S29 pose changes are smoothed with cut points and baked transforms at each sheet boundary (one frame, no blending). The S01 login button now reads `เข้าสู่ระบบ` (was `เข้าสู่ระบบด้วย RMC SSO`). Frame order was verified in the browser and typecheck passes. `/atlas sync repair` still lists the old button name (`docs/atlas/modules/repair.json`).
 - Maintenance interval: new env `MAINTENANCE_INTERVAL`, default `10m`; the dev `.env` uses `1m`. Shared code touched: `server/platform/config.ts`, `jobs.ts`. e2e F07 and F21 pass (18 tests).
 - D-181 (owner request 2026-11-24; built, waiting for owner review): every mascot placement now uses the snow leopard (navy / royal-blue techwear): `components/shared/mascot.tsx` poses, login, S06 actions sprite, settings role art, QR label board, and the S29 admin hero sheets `bam-leopard-admin-{1..6}.webp`. The tiger files are archived in `docs/shared/style/references/mascot-tiger-archive/`. Provenance: `frontend/scripts/assets/mascot-leopard-v1.json` and `attachments/admin-hero-motion/README.md`. Checks: typecheck plus screenshots of every placement. e2e was not run for this asset swap, at the owner's instruction. Shared code touched: `components/shared/mascot.tsx`.
@@ -29,7 +29,7 @@
 
 ## Next
 
-- CR-061: release the accepted code and verify authenticated reads and production write rejection; production private hash/principal and local `.env.local` are configured. Then `cd frontend && npm run dev:aok` at http://127.0.0.1:3000; dedicated launcher clears DATABASE_URL and binds loopback. No test account created; key uses existing Admin permissions.
+- CR-061: restart with `cd frontend && npm run dev:aok`, http://127.0.0.1:3000. Launcher binds loopback and clears DATABASE_URL; existing Admin principal, no new test account. See `deploy/AOK.md` for restore/rotation.
 - Owner to verify a complete SSO login with a real account; provider registration and browser handoff are verified, credential entry/token exchange were not exercised.
 - Owner will upload replacement photos later; the 41 existing database photo records were retained without their missing files.
 - Product Stage 6 remains pending.
@@ -54,11 +54,9 @@
 - 2026-11-20: Owner deployment request completed; SYNQ disabled, existing PostgreSQL reused, production SSO registration accepted. Full login remains an owner check; photos deferred.
 - 2026-11-20: BAMBAM runner configured; release workflow/actionlint and deployment success/rollback/migration-failure checks passed locally. Owner authorized the first release push.
 
-## CR-061 stage report — 2026-11-26
+## CR-061 activation report — 2026-11-26
 
-- Built: read-only production key authentication, existing Admin principal, explicit GET allowlist, local API forwarding, loopback launcher, no-DB startup/migration/pool guards, private 0600 key/hash files and rotation instructions.
-- Acceptance: ✅ key/hash provisioning; ✅ server-only credential and existing permission checks; ✅ local startup without DATABASE_URL; ✅ writes/internal/auth/dev blocked; ✅ binary forwarding and no DB fallback; ❌ production activation/authenticated live reads (pending stage acceptance/release).
-- Demo after release/activation: `cd frontend && npm run dev:aok`, http://127.0.0.1:3000; no new test account, existing Admin principal. Current live upstream rejects the uninstalled key and local returns expected `502 AOK_CREDENTIAL_REJECTED`. Install steps: `deploy/AOK.md`.
-- Checks: lint/typecheck/production build pass (existing photo-storage tracing warnings only); full server suite 27 passed, 2 DB suites skipped (dedicated DB URLs absent); focused 7 tests rerun after allowlist update. Runtime smoke: home 200, me expected 502, ticket POST/maintenance 403, auth/dev GET 404. Migration CLI blocked before DB access. Key absent from browser assets/diff; both private files ignored, mode 0600.
-- Gaps: no production code/config changes, no commit/tag/push, no live key read verification or full browser e2e. UI write controls retain normal permission rendering but writes are denied. Product Stage 6 remains pending. No new business-rule questions.
-- Shared code touched: `frontend/src/lib/aok-mode.ts`, `server/platform/{aok,config,http,db,service,repository,controllers}`, `proxy.ts`, instrumentation and migration/dev/key CLIs; no `components/shared` or DB schema changes. Wait for stage acceptance before commit/tag/release.
+- Owner accepted the stage and explicitly requested configuring local/production secrets via SSH. Local `.env.local` has is_aok=true, secret_key and upstream URL; DATABASE_URL cleared; mode-0600 `.env.before-aok.local` preserves prior values. Production retains DB mode and SSO, with matching hash/principal only (no raw key), existing ownership and private env backup.
+- Release: code commit `1d990e1`, tag `repair-cr-061`; Actions https://github.com/rmcdevlab/bambam/actions/runs/45769384084 succeeded; healthy immutable image `sha256:d1c7b53fe2cc189b1b80265e7b5b41acf2a17c17da8cbaf03b7b742c469cf978`. Pipeline database backup and migration/readiness checks passed.
+- Live checks: production/local me, buildings, tickets and overview 200; absent/invalid keys 401; production/local POST ticket 403; keyed auth/dev GET 403. Normal login 200 and SSO initiation 302. Activation regression tests: 25 passed. No production business records changed by smoke checks. Temporary local check server/cache removed.
+- Validation/shared scope: lint/typecheck/production build passed (existing photo tracing warnings); prior full server run 27 passed/2 DB suites skipped, activation regression 25 passed. Shared changes: `src/lib/aok-mode.ts`, server platform auth/config/HTTP/DB, proxy, instrumentation and CLIs; no shared UI or schema changes. Remaining gaps: full browser e2e and real-account SSO token exchange were not run.

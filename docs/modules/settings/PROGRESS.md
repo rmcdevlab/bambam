@@ -4,7 +4,7 @@
 
 ## Now
 
-- Repair CR-061 (approved 2026-11-26): shared read-only API-key auth also covers existing settings GET routes with existing permission checks. Local API mode has no DB; all key writes are denied. Contract updated; no settings UI/DB change or product-stage advancement. Built, pending acceptance/release; private key is not active on production.
+- Repair CR-061 (approved 2026-11-26): shared read-only API-key auth also covers existing settings GET routes with existing permission checks. Local API mode has no DB; all key writes are denied. Contract updated; no settings UI/DB change or product-stage advancement. Accepted and deployed 2026-11-26 (`repair-cr-061`); production/private local key active, read/write guard verification passes.
 - Owner authorized committing/pushing branch `release` to verify GHCR deployment. Runner `bambam-rmc-prod` is online and enabled at boot; workflow builds on GitHub-hosted Ubuntu and deploys an immutable digest on the server. First Actions run 44654161312 completed successfully (commit 27ab6b9); the running image is pinned to the published GHCR digest.
 
 - Owner-authorized deployment at https://rmc.cipcloud.net/bambam on 192.168.1.143; Docker app `bambam`, persistent photos and interval maintenance. Existing external DATABASE_URL and Superadmin roles retained; backup saved before deployment.
