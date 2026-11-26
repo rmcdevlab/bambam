@@ -8,6 +8,10 @@ Approved 2026-11-19. The owner explicitly requested completing all migration sta
 
 ## Before Stage 1 — Stage 0 (platform, `docs/shared/00-platform.md`)
 
+### Shared runtime rework before Stage 6 (CR-061)
+
+Owner approved 2026-11-26, including the Codex backend/docs exception. Implement read-only API mode (`is_aok=true`), key provisioning/rotation and production principal resolution; remove local DB/SSO/startup-job dependencies in this mode; preserve normal runtime. Verify read forwarding/binary photos, rejected writes/keys/routes, permission reloads, no-DB startup, lint/typecheck/build, and document production activation separately. No product stage advancement. (CR-061)
+
 Repair Stage 1 needs: SSO login (S01 `/login`, `/signed-out`), `proxy.ts` gate, `GET /api/v1/me` (P1), AppShell with the role-based sidebar, top bar and `BottomNav` (`ui/screens/_common.md` §1), S14 profile + logout, S15 role switcher + demo users (P2, P3, one seeded demo user per role with the names in `_common.md` §8), design-system tokens, fonts, mascot + logo assets, shared `EmptyState` / `ErrorState` / `ForbiddenState` / `Mascot` / `ServiceIcon` / `ServiceHeader` / `PriorityIndicator`. Bell and Home are placeholders until Stage 7 (Home shows the option-a CTA card + services only).
 
 ## Stages

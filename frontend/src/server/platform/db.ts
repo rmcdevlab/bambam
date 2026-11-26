@@ -1,9 +1,11 @@
 import "server-only";
 import { Pool, type PoolClient } from "pg";
 import { config } from "./config";
+import { isAok } from "@/lib/aok-mode";
 
 const globalDb = globalThis as typeof globalThis & { bambamPool?: Pool };
 export function pool(): Pool {
+  if (isAok()) throw new Error("Database access is disabled in API mode");
   if (!globalDb.bambamPool) {
     globalDb.bambamPool = new Pool({ connectionString: config().DATABASE_URL,
       max: 10, connectionTimeoutMillis: 3000, statement_timeout: 15000, query_timeout: 15000,

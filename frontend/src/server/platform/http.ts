@@ -1,8 +1,10 @@
 import "server-only";
-import { basePath } from "@/lib/app-path";
+import { basePath, stripBasePath } from "@/lib/app-path";
 import { randomUUID } from "node:crypto";
 import { NextResponse, connection } from "next/server";
 import { ApiError } from "./errors";
+import { isAok } from "@/lib/aok-mode";
+import { AOK_HEADER, aokReadPath, forwardAok } from "./aok";
 const statuses = { invalid: 400, unauthenticated: 401, forbidden: 403, not_found: 404, conflict: 409, business_rule: 422, internal: 500 };
 export function ok(data: unknown) { return NextResponse.json({ data }); }
 export function endpoint(handler: (request: import("next/server").NextRequest) => Promise<NextResponse>) {
@@ -25,6 +27,10 @@ export function endpoint(handler: (request: import("next/server").NextRequest) =
 export function live(handler: (request: import("next/server").NextRequest) => Promise<NextResponse>) {
   return async (request: import("next/server").NextRequest) => {
     await connection();
+    if (isAok()) return forwardAok(request);
+    if (request.headers.has(AOK_HEADER) && (request.method !== "GET" || !aokReadPath(stripBasePath(request.nextUrl.pathname)))) {
+      return NextResponse.json({ error: { code: "AOK_READ_ONLY", message: "API key is restricted to approved reads" } }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
     return handler(request);
   };
 }

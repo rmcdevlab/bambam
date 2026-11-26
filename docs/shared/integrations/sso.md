@@ -9,6 +9,8 @@ Approved 2026-11-19. All auth/session behavior is implemented by `frontend/src/s
 
 ## Provider
 
+Approved local API mode uses a server-only read credential and an existing production principal instead of local database-backed SSO sessions. It does not enable role switching or replace production browser SSO. See shared architecture and `deploy/AOK.md`. (CR-061, approved 2026-11-26)
+
 RMC SSO · OIDC Authorization Code Flow + PKCE (S256 only) · confidential client (`client_secret_post`).
 Upstream identity providers allowed: Microsoft Azure, LINE (no default provider).
 The application creates its **own** session after validating tokens; internal APIs use that session.

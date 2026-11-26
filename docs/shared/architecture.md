@@ -16,6 +16,12 @@ Approved 2026-11-19. One Next.js 16.4.6 application now serves the UI, auth, rep
 
 ## API conventions
 
+### Local API mode (CR-061)
+
+Approved 2026-11-26 by owner. `is_aok=true` on a loopback-bound development server replaces local DB access with an HTTPS proxy to production. Local `secret_key` remains server-only; production stores `AOK_SECRET_KEY_HASH` bound to an existing non-demo `AOK_EMPLOYEE_CODE`. `/api/v1/me` and existing repair/settings GET routes accept `X-Bambam-Api-Key`; services retain existing visibility/permissions and reload the principal per request. Writes and auth/dev/internal routes reject the credential even with a session cookie. Local initialization, migration, seeding, session DB operations and maintenance are disabled; upstream failures never fall back to PostgreSQL. Missing/false `is_aok` retains the normal runtime. Provisioning/rotation: `deploy/AOK.md`. (CR-061)
+
+Local transport errors return `502 AOK_UPSTREAM_UNAVAILABLE`; redirects return `502 AOK_UPSTREAM_REDIRECT`; rejected keys return `502 AOK_CREDENTIAL_REJECTED` to avoid the browser's expired-session redirect loop. Production invalid keys return `401 UNAUTHENTICATED`; prohibited methods return `403 AOK_READ_ONLY`. No raw key or upstream cookie is returned to browsers. (CR-061)
+
 - Base path: `/api/v1/<module>/<resource>` (shared: `/api/v1/health`, `/api/v1/me`)
 - JSON field names: `camelCase`
 - Success: `{ "data": <object|array>, "meta": { "page": 1, "pageSize": 20, "total": 134 } }` (`meta` only for lists)

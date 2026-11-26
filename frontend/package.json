@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:aok": "node scripts/dev-aok.mjs",
+    "aok:issue": "node scripts/issue-aok-key.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

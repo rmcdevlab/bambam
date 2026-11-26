@@ -63,3 +63,5 @@ rebuild with matching public API URLs and SSO configuration.
 
 SYNQ remains stopped with its deployment runner disabled and its volumes intact.
 Do not restore SYNQ as part of BAMBAM deployment.
+
+Read-only local development through production API: [AOK.md](AOK.md). (CR-061)

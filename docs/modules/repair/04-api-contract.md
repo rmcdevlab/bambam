@@ -12,7 +12,7 @@ Status: APPROVED (2026-10-14) · CR-005 applied 2026-10-15 · CR-008 applied 202
 - `camelCase` JSON, RFC 3339 UTC times (examples: `2026-10-14T03:15:00Z` = 14 ต.ค. 2569 10:15 น.), list query `page`, `pageSize` (default 20, max 100), `q`, `sort`.
 - IDs are UUID strings (D-021). `ticketNo` is the human number (`RP-2569-000142`) and is display-only.
 - Field validation errors: `400 VALIDATION_FAILED` with `fields: { "<field>": "<FIELD_CODE>" }`. Field codes: `REQUIRED`, `TOO_LONG`, `MIN_ITEMS`, `MAX_ITEMS`, `INVALID`, `PAST` (a date before today, CR-005). The FE maps `field + code` to the message in the screen spec.
-- Every endpoint needs a session (`401 UNAUTHENTICATED` otherwise, handled by `lib/http.ts` → S01 `?reason=expired`).
+- Every endpoint needs a session (`401 UNAUTHENTICATED` otherwise, handled by `lib/http.ts` → S01 `?reason=expired`). Approved GET routes and `/api/v1/me` also accept server-only `X-Bambam-Api-Key`, bound to an existing user with existing permissions/visibility. Key writes return `403 AOK_READ_ONLY`; invalid/revoked keys return `401 UNAUTHENTICATED`. Local `is_aok=true` forwards these reads without a local DB. See shared architecture and `deploy/AOK.md` for exclusions and local errors. (CR-061)
 - Roles: `employee`, `housekeeper_lead`, `security_lead`, `technician`, `admin` ~~, `executive`~~ (CR-024). "all" = every role. Permission checks are in the service layer; the FE never decides permissions (it renders `allowedActions`).
 
 ## Endpoints

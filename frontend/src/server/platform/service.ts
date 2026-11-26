@@ -6,6 +6,21 @@ import type { User } from "./repository";
 import { ApiError } from "./errors";
 import { effectivePermissions } from "./permissions";
 import * as repo from "./repository";
+import type { NextRequest } from "next/server";
+import { AOK_HEADER, aokReadPath, validAokKey } from "./aok";
+import { stripBasePath } from "@/lib/app-path";
+export async function resolveRequest(request: NextRequest) {
+  if (!request.headers.has(AOK_HEADER)) return resolveSession(request.cookies.get("bam_session")?.value);
+  if (request.method !== "GET" || !aokReadPath(stripBasePath(request.nextUrl.pathname))) {
+    throw new ApiError("forbidden", "AOK_READ_ONLY", "API credential is read-only");
+  }
+  const c = config();
+  if (!validAokKey(request.headers.get(AOK_HEADER)!, c.AOK_SECRET_KEY_HASH) || !c.AOK_EMPLOYEE_CODE) {
+    throw new ApiError("unauthenticated", "UNAUTHENTICATED", "invalid API credential");
+  }
+  const user = effective(await repo.findUserByEmployeeCode(c.AOK_EMPLOYEE_CODE));
+  return { user, origin: null };
+}
 export { createSession, deleteSession, assignSuperAdmins } from "./repository";
 export type { User } from "./repository";
 function effective(user: repo.User): repo.User {

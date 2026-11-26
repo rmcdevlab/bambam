@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { isAok } from "@/lib/aok-mode";
 
 export function duration(value: string): number {
   // Existing Go duration env values remain valid (including compound values).
@@ -12,6 +13,8 @@ export function duration(value: string): number {
 const schema = z.object({
   APP_ENV: z.enum(["development", "uat", "production"]),
   DATABASE_URL: z.string().url(),
+  AOK_SECRET_KEY_HASH: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  AOK_EMPLOYEE_CODE: z.string().min(1).optional(),
   APP_SESSION_SECRET: z.string().min(32),
   APP_SESSION_TTL: z.string().default("12h"),
   SSO_CLOCK_SKEW: z.string().default("60s"),
@@ -34,10 +37,12 @@ const schema = z.object({
   SUPER_ADMIN_EMPLOYEE_CODES: z.string().default(""),
 });
 export function parseConfig(source: Record<string, string | undefined>) {
+  if (isAok(source)) throw new Error("Database configuration is unavailable in API mode");
   const parsed = schema.safeParse(source);
   // Never include input values in configuration errors.
   if (!parsed.success) throw new Error(`Invalid server configuration: ${parsed.error.issues.map(i => i.path.join(".")).join(", ")}`);
   const c = parsed.data;
+  if (!!c.AOK_SECRET_KEY_HASH !== !!c.AOK_EMPLOYEE_CODE) throw new Error("AOK_SECRET_KEY_HASH and AOK_EMPLOYEE_CODE must be configured together");
   if (c.APP_ENV !== "development" && !c.PHOTO_STORAGE_DIR) throw new Error("PHOTO_STORAGE_DIR is required outside development");
   const sessionTTL = duration(c.APP_SESSION_TTL), clockSkew = duration(c.SSO_CLOCK_SKEW);
   const autoClose = duration(c.REPAIR_AUTO_CLOSE_AFTER);

@@ -1,5 +1,6 @@
 import { appPath, stripBasePath } from "@/lib/app-path";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAok, isLoopback } from "@/lib/aok-mode";
 
 // Frontend auth gate (docs/shared/integrations/sso.md). It only checks that a
 // session cookie exists; the API validates the session on every request.
@@ -11,6 +12,11 @@ const SEEN_COOKIE = "bam_seen";
 const PUBLIC_PATHS = ["/login", "/signed-out"];
 
 export function proxy(request: NextRequest) {
+  if (isAok()) {
+    if (!isLoopback(request.nextUrl.hostname)) return new NextResponse("Local API mode requires loopback", { status: 403 });
+    if (request.nextUrl.pathname === "/login") return NextResponse.redirect(new URL(appPath("/"), request.url));
+    return NextResponse.next();
+  }
   // Mock mode (UI built without the backend): no session exists, let everything through.
   if (process.env.NEXT_PUBLIC_USE_MOCKS === "true") return NextResponse.next();
 

@@ -6,10 +6,10 @@ import { equal } from "./crypto";
 import { pool } from "./db";
 import { ApiError } from "./errors";
 import { endpoint, ok } from "./http";
-import { listDemoUsers, me, resolveSession, switchRole } from "./service";
+import { listDemoUsers, me, resolveSession, resolveRequest, switchRole } from "./service";
 import { setSession } from "./auth";
 
-export const currentUser = endpoint(async request => ok(me((await resolveSession(request.cookies.get("bam_session")?.value)).user)));
+export const currentUser = endpoint(async request => ok(me((await resolveRequest(request)).user)));
 function requireDev() {
   if (!config().roleSwitcher) throw new ApiError("not_found", "NOT_FOUND", "not found");
 }

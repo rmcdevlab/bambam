@@ -8,6 +8,8 @@ Status: APPROVED (2026-10-16) — user approved screens + plan; visual style fol
 
 ## Conventions used here (from architecture.md)
 
+Existing GET routes additionally accept server-only `X-Bambam-Api-Key`, bound to an existing non-demo user with current service permission checks. Writes with this key return `403 AOK_READ_ONLY`; invalid/revoked keys return `401 UNAUTHENTICATED`. Local `is_aok=true` forwards reads without a local DB. See repair CR-061, shared architecture and `deploy/AOK.md`. (repair CR-061)
+
 - Success `{ "data": … }`, lists add `"meta": { "page", "pageSize", "total" }`. Error `{ "error": { "code", "message", "fields" } }`.
 - `camelCase` JSON, RFC 3339 UTC times, UUID ids (D-021), list query `page`, `pageSize` (default 20, max 100), `q`.
 - Field errors: `400 VALIDATION_FAILED` with `fields: { "<field>": "<CODE>" }`; codes `REQUIRED`, `TOO_LONG`, `INVALID`, `OUT_OF_RANGE`.

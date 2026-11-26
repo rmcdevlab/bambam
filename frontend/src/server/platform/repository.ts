@@ -15,6 +15,11 @@ const userQuery = `SELECT u.*, r.key AS role, r.name AS role_name,
   ARRAY(SELECT permission FROM platform.role_permissions WHERE role_id=r.id ORDER BY permission) AS permissions
   FROM platform.users u LEFT JOIN platform.user_roles ur ON ur.employee_code=u.employee_code
   JOIN platform.roles r ON r.id=ur.role_id OR (ur.role_id IS NULL AND r.key='employee')`;
+export async function findUserByEmployeeCode(code: string): Promise<User> {
+  const { rows } = await pool().query<User>(`${userQuery} WHERE u.employee_code=$1 AND NOT u.is_demo`, [code]);
+  if (!rows[0]) throw unauthenticated();
+  return rows[0];
+}
 export async function findUser(id: string, db: Pick<PoolClient, "query"> = pool()): Promise<User> {
   const { rows } = await db.query<User>(`${userQuery} WHERE u.id=$1`, [id]);
   if (!rows[0]) throw new ApiError("not_found", "USER_NOT_FOUND", "user not found");
